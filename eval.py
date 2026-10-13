@@ -102,7 +102,11 @@ if __name__ == "__main__":
 
     # Initialize network and load the model weights
     net_builder = get_net_builder(args.net, args.net_from_name)
-    net = net_builder()
+    if args.net == "bert_base" and args.pretrain_path:
+        # The checkpoint supplies the weights; use the configured BERT architecture.
+        net = net_builder(pretrained=False, pretrained_path=args.pretrain_path)
+    else:
+        net = net_builder()
     net.load_state_dict(load_state_dict)
     print("Model Loaded")
 
@@ -128,7 +132,12 @@ if __name__ == "__main__":
     y_true, y_pred, x_feats = [], [], []
     with torch.no_grad():
         for data in tqdm(eval_loader, total=len(eval_loader)):
-            x, y = data["x_lb"].to(device), data["y_lb"].to(device)
+            x = data["x_lb"]
+            if isinstance(x, dict):
+                x = {key: value.to(device) for key, value in x.items()}
+            else:
+                x = x.to(device)
+            y = data["y_lb"].to(device)
 
             # Forward pass
             feat = net(x, only_feat=True)
