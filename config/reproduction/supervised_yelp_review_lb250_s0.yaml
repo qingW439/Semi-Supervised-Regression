@@ -2,8 +2,8 @@ algorithm: supervised
 save_dir: ./saved_models/reproduction/nlp
 save_name: supervised_yelp_review_lb250_s0
 resume: False
-load_path: ./saved_models/nlp/supervised_yelp_review_lb250_s0/latest_model.pth
-overwrite: True
+load_path: ./saved_models/reproduction/nlp/supervised_yelp_review_lb250_s0/latest_model.pth
+overwrite: False
 use_tensorboard: True
 use_wandb: False
 use_aim: False
