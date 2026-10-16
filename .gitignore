@@ -166,3 +166,12 @@ saved_models/
 visualization/features/
 visualization/figures/
 _*/
+# Local experimental artifacts
+/logs/
+*.yaml.bak
+*.pth
+*.pt
+*.parquet
+
+# Private environment files
+.env.*
