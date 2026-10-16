@@ -1,0 +1,91 @@
+{
+  "source_repository": "https://github.com/JULIELab/EmoBank",
+  "source_commit": "248ce2a43e165a66d31aeaed83cff9641d6654e0",
+  "source_csv_sha256": "6d9dead0323aba602f8e4dc3d23930dbcf81810005299abcfac1480e9fa6450f",
+  "source_rows": 10062,
+  "official_split_counts": {
+    "train": 8062,
+    "dev": 1000,
+    "test": 1000
+  },
+  "annotation_perspective": "official combined reader/writer emobank.csv",
+  "original_labels": [
+    "V",
+    "A",
+    "D"
+  ],
+  "normalized_labels": [
+    "V_norm",
+    "A_norm",
+    "D_norm"
+  ],
+  "label_normalization": "(original_value - 1.0) / 4.0; fixed official [1,5] to [0,1]",
+  "selection": "Sort official train by ID; NumPy default_rng(seed).permutation(row positions); first N labeled",
+  "unlabeled_policy": "Exclude all labeled IDs for each budget; id and text only",
+  "budgets": [
+    250,
+    500,
+    1000
+  ],
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "splits": {
+    "lb250_s0": {
+      "labeled_count": 250,
+      "unlabeled_count": 7812,
+      "labeled_ids_file": "labeled_ids_lb250_s0.csv",
+      "labeled_ids_sha256": "854ae053385e4f2fd614158f2c58c10e005f5e6a4011285ce810810db792292b"
+    },
+    "lb500_s0": {
+      "labeled_count": 500,
+      "unlabeled_count": 7562,
+      "labeled_ids_file": "labeled_ids_lb500_s0.csv",
+      "labeled_ids_sha256": "6a091a7e3a8965a8459fc809566d393ce1e326288ed368e356ecdba4d662651c"
+    },
+    "lb1000_s0": {
+      "labeled_count": 1000,
+      "unlabeled_count": 7062,
+      "labeled_ids_file": "labeled_ids_lb1000_s0.csv",
+      "labeled_ids_sha256": "402f47e102b23616c9b1a369724dd66bb55c24b152f045f3b95f653b1ed0d2dd"
+    },
+    "lb250_s1": {
+      "labeled_count": 250,
+      "unlabeled_count": 7812,
+      "labeled_ids_file": "labeled_ids_lb250_s1.csv",
+      "labeled_ids_sha256": "b5f302a3a9da642501668c5c843cc6e968cabf64a4f6b4ed2c2fb608255b4a8d"
+    },
+    "lb500_s1": {
+      "labeled_count": 500,
+      "unlabeled_count": 7562,
+      "labeled_ids_file": "labeled_ids_lb500_s1.csv",
+      "labeled_ids_sha256": "cdf294a1f67ba9f9d93e6adf181a0c31f4e02bec9e286d56cf523a399cfb2514"
+    },
+    "lb1000_s1": {
+      "labeled_count": 1000,
+      "unlabeled_count": 7062,
+      "labeled_ids_file": "labeled_ids_lb1000_s1.csv",
+      "labeled_ids_sha256": "d60811bea273c5fd3c5d6d6a02401895ed9b52ae55d1fb5306a2cee7733f61db"
+    },
+    "lb250_s2": {
+      "labeled_count": 250,
+      "unlabeled_count": 7812,
+      "labeled_ids_file": "labeled_ids_lb250_s2.csv",
+      "labeled_ids_sha256": "3a35c9625e7d8f92549cec59a55ad4be697eec338c4af1a18e5b28bba70d5eb9"
+    },
+    "lb500_s2": {
+      "labeled_count": 500,
+      "unlabeled_count": 7562,
+      "labeled_ids_file": "labeled_ids_lb500_s2.csv",
+      "labeled_ids_sha256": "00de487fde82cf9952ec8331999cd3ec9b4c63a25ce08b88013ceabf81d7fd29"
+    },
+    "lb1000_s2": {
+      "labeled_count": 1000,
+      "unlabeled_count": 7062,
+      "labeled_ids_file": "labeled_ids_lb1000_s2.csv",
+      "labeled_ids_sha256": "95c5ce15fd3e89ba4497f357209f026bc6af61358910ac13acd4f0bb61955e41"
+    }
+  }
+}
