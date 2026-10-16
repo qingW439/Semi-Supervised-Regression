@@ -16,19 +16,23 @@ import hashlib
 import json
 import random
 import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from scipy.stats import spearmanr
-from transformers import AutoTokenizer, BertModel
+from transformers import AutoTokenizer
 
 DIMENSIONS = ("V", "A", "D")
 NORM_COLUMNS = tuple(f"{d}_norm" for d in DIMENSIONS)
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from semilearn.nets.bert.bert_vad import BertVADRegressor
+from semilearn.datasets.nlp_datasets.emobank import GoldData, TextCollator, read_gold
 DEFAULT_DATA_ROOT = REPO.parent / "data" / "emobank_processed"
 DEFAULT_MODEL = "google/bert_uncased_L-4_H-512_A-8"
 
@@ -79,71 +83,6 @@ def sha256_file(path: Path) -> str:
         for block in iter(lambda: stream.read(2**20), b""):
             h.update(block)
     return h.hexdigest()
-
-
-def read_gold(path: Path, *, expected_n: int | None = None) -> pd.DataFrame:
-    if not path.is_file():
-        raise FileNotFoundError(f"Missing data file: {path}")
-    frame = pd.read_parquet(path)
-    required = ("id", "text", *DIMENSIONS, *NORM_COLUMNS)
-    if not set(required).issubset(frame.columns):
-        raise ValueError(f"Invalid columns in {path}: {frame.columns.tolist()}")
-    if expected_n is not None and len(frame) != expected_n:
-        raise ValueError(f"Expected {expected_n} rows in {path}, got {len(frame)}")
-    if frame["id"].isna().any() or frame["id"].duplicated().any():
-        raise ValueError(f"Invalid or duplicate IDs: {path}")
-    if frame["text"].isna().any() or not frame["text"].map(lambda v: isinstance(v, str)).all():
-        raise ValueError(f"Text must consist of non-null strings: {path}")
-    numeric = frame.loc[:, list(DIMENSIONS) + list(NORM_COLUMNS)].to_numpy(dtype=np.float64)
-    if not np.isfinite(numeric).all():
-        raise ValueError(f"Non-finite labels: {path}")
-    orig = frame[list(DIMENSIONS)].to_numpy(dtype=np.float64)
-    scaled = frame[list(NORM_COLUMNS)].to_numpy(dtype=np.float64)
-    if not np.allclose(scaled, (orig - 1.0) / 4.0, atol=2e-7, rtol=0):
-        raise ValueError(f"Inconsistent VAD normalization in {path}")
-    if not ((orig >= 1).all() and (orig <= 5).all()):
-        raise ValueError(f"Gold VAD outside [1, 5]: {path}")
-    return frame.reset_index(drop=True)
-
-
-class GoldData(Dataset):
-    def __init__(self, frame: pd.DataFrame):
-        self.text = frame["text"].tolist()
-        self.y = frame.loc[:, NORM_COLUMNS].to_numpy(dtype=np.float32)
-        self.ids = frame["id"].tolist()
-    def __len__(self):
-        return len(self.text)
-    def __getitem__(self, idx):
-        return self.text[idx], self.y[idx], self.ids[idx]
-
-
-class TextCollator:
-    def __init__(self, tokenizer, max_length):
-        self.tokenizer = tokenizer
-        self.max_length = max_length
-    def __call__(self, rows):
-        texts, values, ids = zip(*rows)
-        tokenized = self.tokenizer(
-            list(texts), truncation=True, max_length=self.max_length,
-            padding=True, return_tensors="pt",
-        )
-        return tokenized, torch.tensor(np.stack(values), dtype=torch.float32), list(ids)
-
-
-class BertVADRegressor(nn.Module):
-    """BERT + padding-mask-aware mean pooling + 3 continuous outputs."""
-    def __init__(self, pretrained_path: str, dropout=0.1, offline=False):
-        super().__init__()
-        self.bert = BertModel.from_pretrained(pretrained_path, local_files_only=offline)
-        hidden = self.bert.config.hidden_size
-        self.dropout = nn.Dropout(dropout)
-        self.head = nn.Sequential(nn.Linear(hidden, hidden), nn.GELU(), nn.Linear(hidden, 3))
-
-    def forward(self, **tokens):
-        hidden = self.bert(**tokens, return_dict=True).last_hidden_state
-        mask = tokens["attention_mask"].unsqueeze(-1).to(dtype=hidden.dtype)
-        pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1)
-        return self.head(self.dropout(pooled))
 
 
 def metric_report(y_norm: np.ndarray, p_norm: np.ndarray) -> dict:
