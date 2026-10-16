@@ -69,8 +69,10 @@ class RankUpVADLoss(nn.Module):
                 raise ValueError("Unlabeled pair shapes differ")
             m = weak_pairs.shape[0]
             with torch.no_grad():
-                probabilities = (weak_pairs / self.temperature).softmax(-1)
-                confidence, pseudo = probabilities.max(-1)
+                # Match RankUp semantics: filter on raw probabilities, then
+                # generate the hard pseudo-label from separately sharpened logits.
+                confidence = weak_pairs.softmax(-1).max(-1).values
+                pseudo = (weak_pairs / self.temperature).softmax(-1).argmax(-1)
                 mask = confidence >= self.p_cutoff
                 mask &= ~torch.eye(m, dtype=torch.bool, device=mask.device)[:, :, None]
             if mask.any():

@@ -1,0 +1,208 @@
+{
+  "sampling": {
+    "num_draws": 30000,
+    "seed": 12345,
+    "sampling_with_replacement": true,
+    "test_accessed": false
+  },
+  "V": {
+    "valid_pair_draws": 27262,
+    "gold_tie_fraction": 0.09126666666666672,
+    "pair_accuracy_all": 0.6545374513975497,
+    "score_tie_fraction": 0.0,
+    "confidence_quantiles_raw": {
+      "0.5": 0.6274471282958984,
+      "0.9": 0.782031935453415,
+      "0.95": 0.8250039905309677,
+      "0.99": 0.8905394685268402
+    },
+    "raw_softmax_thresholds": {
+      "0.60": {
+        "coverage": 0.6017533563201526,
+        "accepted": 16405,
+        "accuracy": 0.7194148125571472
+      },
+      "0.70": {
+        "coverage": 0.2769789450517203,
+        "accepted": 7551,
+        "accuracy": 0.7912859223943849
+      },
+      "0.80": {
+        "coverage": 0.07567309808524686,
+        "accepted": 2063,
+        "accuracy": 0.8526417838099855
+      },
+      "0.90": {
+        "coverage": 0.007152813439953048,
+        "accepted": 195,
+        "accuracy": 0.9435897435897436
+      },
+      "0.95": {
+        "coverage": 0.00022008656738317073,
+        "accepted": 6,
+        "accuracy": 1.0
+      }
+    },
+    "temperature_0.5_thresholds": {
+      "0.60": {
+        "coverage": 0.7907343555131685,
+        "accepted": 21557,
+        "accuracy": 0.6878044254766433
+      },
+      "0.70": {
+        "coverage": 0.5849534150099039,
+        "accepted": 15947,
+        "accuracy": 0.7232081269204239
+      },
+      "0.80": {
+        "coverage": 0.37113931479715356,
+        "accepted": 10118,
+        "accuracy": 0.7652698161692034
+      },
+      "0.90": {
+        "coverage": 0.15831560413762746,
+        "accepted": 4316,
+        "accuracy": 0.8232159406858202
+      },
+      "0.95": {
+        "coverage": 0.061257427921649184,
+        "accepted": 1670,
+        "accuracy": 0.8646706586826347
+      }
+    }
+  },
+  "A": {
+    "valid_pair_draws": 27522,
+    "gold_tie_fraction": 0.0826,
+    "pair_accuracy_all": 0.605515587529976,
+    "score_tie_fraction": 0.0,
+    "confidence_quantiles_raw": {
+      "0.5": 0.6344119906425476,
+      "0.9": 0.7945688605308533,
+      "0.95": 0.8337059348821639,
+      "0.99": 0.8926749753952027
+    },
+    "raw_softmax_thresholds": {
+      "0.60": {
+        "coverage": 0.6204127607005305,
+        "accepted": 17075,
+        "accuracy": 0.6561639824304539
+      },
+      "0.70": {
+        "coverage": 0.30513770801540585,
+        "accepted": 8398,
+        "accuracy": 0.7073112645868064
+      },
+      "0.80": {
+        "coverage": 0.0916357822832643,
+        "accepted": 2522,
+        "accuracy": 0.76050753370341
+      },
+      "0.90": {
+        "coverage": 0.0074849211539859024,
+        "accepted": 206,
+        "accuracy": 0.8349514563106796
+      },
+      "0.95": {
+        "coverage": 0.000254341980960686,
+        "accepted": 7,
+        "accuracy": 1.0
+      }
+    },
+    "temperature_0.5_thresholds": {
+      "0.60": {
+        "coverage": 0.8033936487173897,
+        "accepted": 22111,
+        "accuracy": 0.628013206096513
+      },
+      "0.70": {
+        "coverage": 0.6056972603735193,
+        "accepted": 16670,
+        "accuracy": 0.6578284343131374
+      },
+      "0.80": {
+        "coverage": 0.3971731705544655,
+        "accepted": 10931,
+        "accuracy": 0.6902387704693075
+      },
+      "0.90": {
+        "coverage": 0.1829082188794419,
+        "accepted": 5034,
+        "accuracy": 0.7385776718315455
+      },
+      "0.95": {
+        "coverage": 0.07317782137926022,
+        "accepted": 2014,
+        "accuracy": 0.7760675273088381
+      }
+    }
+  },
+  "D": {
+    "valid_pair_draws": 26837,
+    "gold_tie_fraction": 0.10543333333333338,
+    "pair_accuracy_all": 0.5783433319670604,
+    "score_tie_fraction": 0.0,
+    "confidence_quantiles_raw": {
+      "0.5": 0.6126084327697754,
+      "0.9": 0.7535884976387024,
+      "0.95": 0.7894465565681457,
+      "0.99": 0.849962306022644
+    },
+    "raw_softmax_thresholds": {
+      "0.60": {
+        "coverage": 0.5499124343257443,
+        "accepted": 14758,
+        "accuracy": 0.6113294484347472
+      },
+      "0.70": {
+        "coverage": 0.21183440772068413,
+        "accepted": 5685,
+        "accuracy": 0.6527704485488126
+      },
+      "0.80": {
+        "coverage": 0.040205686179528265,
+        "accepted": 1079,
+        "accuracy": 0.6635773864689527
+      },
+      "0.90": {
+        "coverage": 0.0008197637589894549,
+        "accepted": 22,
+        "accuracy": 0.5
+      },
+      "0.95": {
+        "coverage": 0.0,
+        "accepted": 0,
+        "accuracy": null
+      }
+    },
+    "temperature_0.5_thresholds": {
+      "0.60": {
+        "coverage": 0.7663300666989604,
+        "accepted": 20566,
+        "accuracy": 0.5946221919673247
+      },
+      "0.70": {
+        "coverage": 0.5322502515184261,
+        "accepted": 14284,
+        "accuracy": 0.6144637356482778
+      },
+      "0.80": {
+        "coverage": 0.3064798598949212,
+        "accepted": 8225,
+        "accuracy": 0.6389057750759879
+      },
+      "0.90": {
+        "coverage": 0.10604762082199948,
+        "accepted": 2846,
+        "accuracy": 0.6595221363316937
+      },
+      "0.95": {
+        "coverage": 0.029362447367440474,
+        "accepted": 788,
+        "accuracy": 0.6611675126903553
+      }
+    }
+  },
+  "checkpoint": "saved_models/emobank/rankonly_diag_lb250_s0/model_best.pth",
+  "best_epoch": 5
+}
