@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""E1 checkpoint continuation: RankUp 3D or equal-step supervised control.
+"""E1 checkpoint continuation: supervised, gold ARC, or RankUp 3D.
 
 Only train labels and unlabeled text enter optimization. Test is read for IDs
 alone to check split disjointness; its text and gold values are never loaded.
@@ -47,7 +47,7 @@ def parse_args(argv=None):
     p.add_argument("--data-root", default="../data/emobank_processed")
     p.add_argument("--checkpoint", required=False, help="Existing E1 model_best.pth")
     p.add_argument("--pretrain-path", default="google/bert_uncased_L-4_H-512_A-8")
-    p.add_argument("--mode", choices=("rank3d", "supervised_control"), default="rank3d")
+    p.add_argument("--mode", choices=("rank3d", "supervised_arc", "supervised_control"), default="rank3d")
     p.add_argument("--budget", type=int, default=500)
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--batch-size", type=int, default=8)
@@ -87,6 +87,8 @@ def parse_args(argv=None):
         p.error("--confidence-cutoff must be in [0.5,1]")
     if a.arc_weight < 0 or a.unlabeled_rank_weight < 0 or a.lr <= 0 or a.weight_decay < 0:
         p.error("Invalid loss or optimizer weights")
+    if a.mode == "supervised_arc" and a.unlabeled_rank_weight != 0:
+        p.error("supervised_arc requires unlabeled_rank_weight=0")
     a.data_root = _repo_path(a.data_root)
     a.checkpoint = _repo_path(a.checkpoint)
     a.out = _repo_path(a.out or f"saved_models/emobank/{a.mode}_lb{a.budget}_s{a.seed}")
@@ -147,7 +149,10 @@ def load_model(a, device):
     state = checkpoint["model"]
     backbone.load_state_dict(state, strict=True)
     model = BertVADRank3D(backbone).to(device)
-    return model, checkpoint.get("epoch")
+    epoch0_metrics = checkpoint.get("dev_metrics")
+    if epoch0_metrics is None or any(dim not in epoch0_metrics for dim in DIMENSIONS):
+        raise ValueError("E1 checkpoint lacks epoch-0 Dev metrics")
+    return model, checkpoint.get("epoch"), epoch0_metrics
 
 
 def _move(tokens, device):
@@ -166,23 +171,26 @@ def train_step(model, optimizer, labeled_batch, unlabeled_batch, a, device):
     ties = torch.zeros(3, dtype=torch.long, device=device)
     accepted = torch.zeros(3, dtype=torch.long, device=device)
     possible = torch.zeros(3, dtype=torch.long, device=device)
+    if a.mode in ("rank3d", "supervised_arc"):
+        supervised, ties = supervised_rank_loss(labeled["rank_logits"], targets)
     if a.mode == "rank3d":
         if unlabeled_batch is None:
             raise ValueError("Rank3D needs unlabeled data")
-        supervised, ties = supervised_rank_loss(labeled["rank_logits"], targets)
         unlabeled_tokens = _move(unlabeled_batch[0], device)
         # Same text and token IDs in both views. Eval teacher is deterministic;
         # train student differs only through dropout, with no teacher gradient.
-        model.eval()
-        with torch.no_grad():
-            teacher = model(**unlabeled_tokens)["rank_logits"]
-        model.train()
-        student = model(**unlabeled_tokens)["rank_logits"]
+        # Keep these extra draws out of the labeled dropout RNG stream so B0,
+        # B1 and B2 use the same labeled views at each optimizer step.
+        cuda_devices = [torch.cuda.current_device()] if device.type == "cuda" else []
+        with torch.random.fork_rng(devices=cuda_devices):
+            model.eval()
+            with torch.no_grad():
+                teacher = model(**unlabeled_tokens)["rank_logits"]
+            model.train()
+            student = model(**unlabeled_tokens)["rank_logits"]
         unsupervised, accepted, possible = pseudo_rank_loss(
             teacher, student, a.confidence_cutoff)
-        loss = regression + a.arc_weight * (supervised + a.unlabeled_rank_weight * unsupervised)
-    else:
-        loss = regression
+    loss = regression + a.arc_weight * (supervised + a.unlabeled_rank_weight * unsupervised)
     if not torch.isfinite(loss):
         raise RuntimeError("Nonfinite training loss")
     loss.backward()
@@ -216,25 +224,32 @@ def main(argv=None):
     labeled_loader = DataLoader(GoldData(labeled), batch_size=a.batch_size,
                                 shuffle=True, num_workers=0, collate_fn=gold_collate,
                                 generator=torch.Generator().manual_seed(a.seed))
-    unlabeled_loader = DataLoader(UnlabeledData(unlabeled),
-                                  batch_size=a.batch_size * a.unlabeled_ratio,
-                                  shuffle=True, num_workers=0,
-                                  collate_fn=UnlabeledCollator(tokenizer, a.max_length),
-                                  generator=torch.Generator().manual_seed(a.seed + 10000))
+    unlabeled_loader = None
+    if a.mode == "rank3d":
+        unlabeled_loader = DataLoader(UnlabeledData(unlabeled),
+                                      batch_size=a.batch_size * a.unlabeled_ratio,
+                                      shuffle=True, num_workers=0,
+                                      collate_fn=UnlabeledCollator(tokenizer, a.max_length),
+                                      generator=torch.Generator().manual_seed(a.seed + 10000))
     dev_loader = DataLoader(GoldData(dev), batch_size=a.eval_batch_size,
                             shuffle=False, num_workers=0, collate_fn=gold_collate)
-    model, source_epoch = load_model(a, device)
+    model, source_epoch, epoch0_metrics = load_model(a, device)
     print(f"STRICT_CHECKPOINT_LOAD=PASS source_epoch={source_epoch} "
           f"optimizer_steps_per_epoch={len(labeled_loader)} mode={a.mode}", flush=True)
+    print(f"EPOCH_0_DEV_MACRO_MAE_1TO5={epoch0_metrics['macro_mae_original_scale']:.6f}", flush=True)
     optimizer = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.weight_decay)
     config = {**vars(a), "data_root": str(a.data_root), "checkpoint": str(a.checkpoint),
               "out": str(a.out), "config": str(a.config) if a.config else None,
               "repository_commit": current_git_commit(), "checkpoint_sha256": _sha256(a.checkpoint),
+              "initial_rank_head_sha256": hashlib.sha256(b"".join(
+                  tensor.detach().cpu().numpy().tobytes()
+                  for tensor in model.rank_head.parameters())).hexdigest(),
               "split_sha256": {key: _sha256(path) for key, path in paths.items()},
               "source_epoch": source_epoch, "steps_per_epoch": len(labeled_loader),
+              "rng_control": "independent labeled/unlabeled sampler generators; pseudo-view dropout in fork_rng",
               "test_access": "ID column only for leakage check"}
     if a.smoke_steps:
-        unlabeled_iter = iter(unlabeled_loader)
+        unlabeled_iter = iter(unlabeled_loader) if unlabeled_loader is not None else None
         for step, batch in enumerate(labeled_loader, start=1):
             ub = next(unlabeled_iter) if a.mode == "rank3d" else None
             report = train_step(model, optimizer, batch, ub, a, device)
@@ -252,9 +267,18 @@ def main(argv=None):
 
     a.out.mkdir(parents=True, exist_ok=False)
     (a.out / "run_config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    (a.out / "epoch0_reference.json").write_text(
+        json.dumps({"source_checkpoint": str(a.checkpoint), "source_epoch": source_epoch,
+                    "checkpoint_sha256": config["checkpoint_sha256"],
+                    "dev_metrics": epoch0_metrics}, indent=2) + "\n", encoding="utf-8")
     best, best_epoch = math.inf, 0
-    history = []
-    unlabeled_iter = iter(unlabeled_loader)
+    history = [{"epoch": 0, "steps": 0,
+                "dev_macro_mae_1to5": epoch0_metrics["macro_mae_original_scale"],
+                "dev_macro_ccc": float(np.mean([epoch0_metrics[d]["ccc"] for d in DIMENSIONS])),
+                **{f"dev_{d}_{k}": epoch0_metrics[d][k] for d in DIMENSIONS
+                   for k in ("mae", "rmse", "pearson", "ccc")}}]
+    pd.DataFrame(history).to_csv(a.out / "training_history.csv", index=False)
+    unlabeled_iter = iter(unlabeled_loader) if unlabeled_loader is not None else None
     for epoch in range(1, a.epochs + 1):
         sums = {key: 0.0 for key in ("loss", "regression", "supervised_rank", "unsupervised_rank")}
         accepted = np.zeros(3, dtype=np.int64)

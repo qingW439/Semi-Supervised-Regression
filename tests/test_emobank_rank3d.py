@@ -1,6 +1,8 @@
 """CPU tests for the three-dimensional auxiliary ranking objective."""
 
 import unittest
+from copy import deepcopy
+from types import SimpleNamespace
 
 import torch
 from torch import nn
@@ -8,6 +10,7 @@ from torch import nn
 from semilearn.nets.bert.bert_vad_rank import (
     BertVADRank3D, pseudo_rank_loss, supervised_rank_loss,
 )
+from scripts.emobank.train_emobank_rank3d import train_step
 
 
 class TinyBackbone(nn.Module):
@@ -22,6 +25,17 @@ class TinyBackbone(nn.Module):
 
     def regress(self, features):
         return self.head(features)
+
+
+class CountingDropoutBackbone(TinyBackbone):
+    def __init__(self):
+        super().__init__()
+        self.dropout = nn.Dropout(0.3)
+        self.forward_calls = 0
+
+    def encode(self, **tokens):
+        self.forward_calls += 1
+        return self.dropout(tokens["features"])
 
 
 class Rank3DTests(unittest.TestCase):
@@ -77,6 +91,36 @@ class Rank3DTests(unittest.TestCase):
         self.assertEqual(ties.tolist(), [0, 0, 0])
         loss.backward()
         self.assertTrue(torch.equal(rank.grad, torch.zeros_like(rank)))
+
+    def test_three_controls_use_expected_signals_and_same_labeled_rng(self):
+        base = BertVADRank3D(CountingDropoutBackbone())
+        labeled = ({"features": torch.randn(4, 4)}, torch.rand(4, 3), list(range(4)))
+        unlabeled = ({"features": torch.randn(4, 4)}, list(range(4)))
+        rng_states = {}
+        for mode, expected_calls in (("supervised_control", 1),
+                                     ("supervised_arc", 1), ("rank3d", 3)):
+            model = deepcopy(base)
+            optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+            args = SimpleNamespace(mode=mode, arc_weight=0.2,
+                                   unlabeled_rank_weight=0 if mode == "supervised_arc" else 1,
+                                   confidence_cutoff=0.95, clip_grad_norm=1.0)
+            torch.manual_seed(2026)
+            report = train_step(model, optimizer, labeled,
+                                unlabeled if mode == "rank3d" else None,
+                                args, torch.device("cpu"))
+            rng_states[mode] = torch.get_rng_state().clone()
+            self.assertEqual(model.backbone.forward_calls, expected_calls)
+            self.assertTrue(torch.isfinite(torch.tensor(report["loss"])))
+            if mode == "supervised_control":
+                self.assertEqual(report["supervised_rank"], 0)
+            else:
+                self.assertGreater(report["supervised_rank"], 0)
+            if mode != "rank3d":
+                self.assertEqual(report["unsupervised_rank"], 0)
+                self.assertEqual(report["possible"], [0, 0, 0])
+        self.assertTrue(torch.equal(rng_states["supervised_control"],
+                                    rng_states["supervised_arc"]))
+        self.assertTrue(torch.equal(rng_states["supervised_arc"], rng_states["rank3d"]))
 
 
 if __name__ == "__main__":
