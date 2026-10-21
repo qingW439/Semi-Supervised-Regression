@@ -1,0 +1,16 @@
+{
+  "stage": "S1",
+  "budget": 500,
+  "seed": 0,
+  "model": "google/bert_uncased_L-4_H-512_A-8",
+  "max_length": 128,
+  "batch_size": 8,
+  "eval_batch_size": 16,
+  "epochs": 25,
+  "encoder_lr": 1e-6,
+  "head_lr": 1e-5,
+  "weight_decay": 5e-4,
+  "clip_grad_norm": 1.0,
+  "dropout": 0.1,
+  "output_dir": "saved_models/emobank/strong_supervised/s1_lb500_s0"
+}
