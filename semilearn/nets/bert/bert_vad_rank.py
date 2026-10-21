@@ -62,7 +62,11 @@ def supervised_rank_loss(rank_logits: torch.Tensor, targets: torch.Tensor):
 
 def pseudo_rank_loss(teacher_logits: torch.Tensor, student_logits: torch.Tensor,
                      confidence_cutoff: float):
-    """Hard pseudo-ranks from detached teacher, selected once per unordered pair."""
+    """Masked pseudo-rank BCE averaged over all unique candidate pairs.
+
+    The mask zeros unselected terms before division by 3 * B * (B - 1) / 2,
+    matching RankUp's mask-then-mean convention on our unique-pair domain.
+    """
     if teacher_logits.shape != student_logits.shape:
         raise ValueError("teacher and student rank logits differ in shape")
     if not 0.5 <= confidence_cutoff <= 1.0:
@@ -78,5 +82,7 @@ def pseudo_rank_loss(teacher_logits: torch.Tensor, student_logits: torch.Tensor,
         possible_counts = mask.sum(dim=(0, 1))
     if not accepted.any():
         return student_pair_logit.sum() * 0.0, accepted_counts, possible_counts
-    loss = F.binary_cross_entropy_with_logits(student_pair_logit[accepted], hard_target[accepted])
+    per_pair = F.binary_cross_entropy_with_logits(
+        student_pair_logit, hard_target, reduction="none")
+    loss = (per_pair * accepted.to(per_pair.dtype)).sum() / possible_counts.sum()
     return loss, accepted_counts, possible_counts

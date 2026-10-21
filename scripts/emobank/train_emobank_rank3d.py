@@ -63,6 +63,8 @@ def parse_args(argv=None):
     p.add_argument("--arc-weight", type=float, default=0.2)
     p.add_argument("--unlabeled-rank-weight", type=float, default=1.0)
     p.add_argument("--confidence-cutoff", type=float, default=0.95)
+    p.add_argument("--diagnostic-epochs", nargs="*", type=int, default=[],
+                   help="Preset epochs for extra rank-quality checkpoints")
     p.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     p.add_argument("--offline", action="store_true")
     p.add_argument("--out", help="New empty output directory")
@@ -89,6 +91,9 @@ def parse_args(argv=None):
         p.error("Invalid loss or optimizer weights")
     if a.mode == "supervised_arc" and a.unlabeled_rank_weight != 0:
         p.error("supervised_arc requires unlabeled_rank_weight=0")
+    if len(set(a.diagnostic_epochs)) != len(a.diagnostic_epochs) or any(
+            epoch < 1 or epoch > a.epochs for epoch in a.diagnostic_epochs):
+        p.error("diagnostic_epochs must be unique and within [1, epochs]")
     a.data_root = _repo_path(a.data_root)
     a.checkpoint = _repo_path(a.checkpoint)
     a.out = _repo_path(a.out or f"saved_models/emobank/{a.mode}_lb{a.budget}_s{a.seed}")
@@ -200,6 +205,8 @@ def train_step(model, optimizer, labeled_batch, unlabeled_batch, a, device):
     return {"loss": float(loss.detach()), "regression": float(regression.detach()),
             "supervised_rank": float(supervised.detach()),
             "unsupervised_rank": float(unsupervised.detach()),
+            "weighted_supervised_rank": float((a.arc_weight * supervised).detach()),
+            "weighted_unsupervised_rank": float((a.arc_weight * a.unlabeled_rank_weight * unsupervised).detach()),
             "accepted": accepted.cpu().tolist(), "possible": possible.cpu().tolist(),
             "ties": ties.cpu().tolist(),
             "regression_shape": list(labeled["regression"].shape),
@@ -247,6 +254,7 @@ def main(argv=None):
               "split_sha256": {key: _sha256(path) for key, path in paths.items()},
               "source_epoch": source_epoch, "steps_per_epoch": len(labeled_loader),
               "rng_control": "independent labeled/unlabeled sampler generators; pseudo-view dropout in fork_rng",
+              "pseudo_loss_normalization": "masked sum / all unique candidate pairs across V,A,D",
               "test_access": "ID column only for leakage check"}
     if a.smoke_steps:
         unlabeled_iter = iter(unlabeled_loader) if unlabeled_loader is not None else None
@@ -280,7 +288,9 @@ def main(argv=None):
     pd.DataFrame(history).to_csv(a.out / "training_history.csv", index=False)
     unlabeled_iter = iter(unlabeled_loader) if unlabeled_loader is not None else None
     for epoch in range(1, a.epochs + 1):
-        sums = {key: 0.0 for key in ("loss", "regression", "supervised_rank", "unsupervised_rank")}
+        sums = {key: 0.0 for key in (
+            "loss", "regression", "supervised_rank", "unsupervised_rank",
+            "weighted_supervised_rank", "weighted_unsupervised_rank")}
         accepted = np.zeros(3, dtype=np.int64)
         possible = np.zeros(3, dtype=np.int64)
         ties = np.zeros(3, dtype=np.int64)
@@ -328,6 +338,10 @@ def main(argv=None):
                 frame[f"gold_{dim}"] = gold[:, index] * 4 + 1
                 frame[f"pred_{dim}"] = predictions[:, index] * 4 + 1
             frame.to_csv(a.out / "dev_predictions_best.csv", index=False)
+        if epoch in a.diagnostic_epochs:
+            torch.save({"model": model.state_dict(), "epoch": epoch,
+                        "dev_metrics": metrics, "run_config": config},
+                       a.out / f"model_epoch_{epoch:02d}.pth")
         pd.DataFrame(history).to_csv(a.out / "training_history.csv", index=False)
     print(f"BEST epoch={best_epoch} DevMacroMAE_1to5={best:.6f} outputs={a.out}", flush=True)
     print("TEST labels/text never loaded or evaluated", flush=True)

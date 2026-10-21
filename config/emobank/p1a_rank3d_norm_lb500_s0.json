@@ -1,0 +1,23 @@
+{
+  "mode": "rank3d",
+  "budget": 500,
+  "seed": 0,
+  "data_root": "../data/emobank_processed",
+  "checkpoint": "../Semi-Supervised-Regression/saved_models/emobank/supervised_lb500_s0/model_best.pth",
+  "pretrain_path": "google/bert_uncased_L-4_H-512_A-8",
+  "offline": true,
+  "batch_size": 8,
+  "unlabeled_ratio": 1,
+  "eval_batch_size": 16,
+  "max_length": 128,
+  "epochs": 25,
+  "lr": 0.00001,
+  "weight_decay": 0.0005,
+  "dropout": 0.1,
+  "clip_grad_norm": 1.0,
+  "arc_weight": 0.2,
+  "unlabeled_rank_weight": 1.0,
+  "confidence_cutoff": 0.95,
+  "diagnostic_epochs": [1, 5, 15, 25],
+  "out": "saved_models/emobank/p1a_rank3d_norm_lb500_s0"
+}
