@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import torch
 import torch.nn.functional as F
-from torch.nn.utils.stateless import functional_call
+try:
+    from torch.func import functional_call
+except ImportError:  # PyTorch 1.x CPU compatibility
+    from torch.nn.utils.stateless import functional_call
 
 
 def disjoint_meta_batch(meta_iterator, supervised_ids, desired_size, max_tries=100):
@@ -46,12 +49,34 @@ def per_dimension_unlabeled(strong, weak, detached_log_variance):
     return (0.5 * torch.exp(-detached_log_variance) * (strong - weak.detach()).square()).mean(dim=0)
 
 
-def virtual_utility_matrix(head, unlabeled_losses, meta_features, meta_targets, step_size):
-    """M[d,k] = meta MSE_d before minus after a virtual step on unlabeled k.
+def weighted_dimensional_pseudo_mse(strong, weak, detached_log_variance, weights):
+    """The HPL elementwise loss with one nonnegative multiplier per dimension.
+
+    Multiplication precedes the single batch-and-dimension reduction. This
+    preserves the original HPL reduction order when all weights equal one.
+    """
+    if weights.shape != (3,) or not torch.isfinite(weights).all() or (weights < 0).any():
+        raise ValueError("Expected three finite nonnegative weights")
+    if strong.ndim != 2 or strong.shape[1] != 3 or weak.shape != strong.shape or detached_log_variance.shape != strong.shape:
+        raise ValueError("Expected three matching [batch, 3] tensors")
+    elements = 0.5 * torch.exp(-detached_log_variance) * (strong - weak.detach()).square()
+    return (elements * weights.to(device=strong.device, dtype=strong.dtype).view(1, 3)).mean()
+
+
+def _flat_double(grads, parameters):
+    return torch.cat([(torch.zeros_like(p) if g is None else g).detach().double().reshape(-1)
+                      for p, g in zip(parameters, grads)])
+
+
+def virtual_utility_probe(head, unlabeled_losses, meta_features, meta_targets,
+                          step_size, include_float32=False):
+    """Probe M[unlabeled, meta] and scale-free first-order alignment.
 
     Uses stateless parameter substitution. No real parameter, optimizer state,
     encoder parameter or meta label is updated. The virtual step is SGD with
     the current head learning rate, used only to estimate directional utility.
+    The controller receives gradient cosine, not a rescaled tiny finite
+    difference. Positive M means the virtual unlabeled step improves meta MSE.
     """
     if unlabeled_losses.shape != (3,) or meta_targets.ndim != 2 or meta_targets.shape[1] != 3:
         raise ValueError("Expected three losses and [batch, 3] meta targets")
@@ -60,24 +85,66 @@ def virtual_utility_matrix(head, unlabeled_losses, meta_features, meta_targets, 
     named = list(head.named_parameters())
     names = [name for name, _ in named]
     parameters = [param for _, param in named]
-    # Evaluate tiny 5e-6 virtual steps in float64 so the loss difference does
-    # not disappear through float32 cancellation. This never casts the model.
     base = {name: param.detach().double() for name, param in named}
     meta_x = meta_features.detach().double()
     meta_y = meta_targets.detach().double()
+    meta_prediction = head(meta_features.detach())
+    meta_losses = (meta_prediction - meta_targets).square().mean(dim=0)
+    meta_grads = [_flat_double(torch.autograd.grad(meta_losses[k], parameters,
+                                                   retain_graph=True, allow_unused=True), parameters)
+                  for k in range(3)]
     with torch.no_grad():
-        before = (functional_call(head, base, (meta_x,)) - meta_y).square().mean(dim=0)
-    columns = []
-    for k in range(3):
-        grads = torch.autograd.grad(unlabeled_losses[k], parameters, retain_graph=True, allow_unused=True)
-        virtual = {
-            name: (base[name] - step_size * grad.detach().double() if grad is not None else base[name])
-            for name, param, grad in zip(names, parameters, grads)
-        }
+        before64 = (functional_call(head, base, (meta_x,)) - meta_y).square().mean(dim=0)
+        before32 = (head(meta_features.detach()) - meta_targets).square().mean(dim=0) if include_float32 else None
+    parameter_norm = torch.linalg.vector_norm(torch.cat([p.reshape(-1) for p in base.values()]))
+    rows64, rows32, rows_first, rows_cosine = [], [], [], []
+    delta_norms, parameter_norms_after = [], []
+    for unlabeled_dim in range(3):
+        grads = torch.autograd.grad(unlabeled_losses[unlabeled_dim], parameters,
+                                    retain_graph=True, allow_unused=True)
+        gradient = _flat_double(grads, parameters)
+        delta_norms.append(step_size * torch.linalg.vector_norm(gradient))
+        virtual64 = {name: base[name] - step_size * (torch.zeros_like(param) if grad is None else grad).detach().double()
+                     for (name, param), grad in zip(named, grads)}
+        parameter_norms_after.append(torch.linalg.vector_norm(
+            torch.cat([parameter.reshape(-1) for parameter in virtual64.values()])))
         with torch.no_grad():
-            after = (functional_call(head, virtual, (meta_x,)) - meta_y).square().mean(dim=0)
-        columns.append(before - after)
-    matrix = torch.stack(columns, dim=1)
-    if matrix.shape != (3, 3) or not torch.isfinite(matrix).all():
-        raise FloatingPointError("Nonfinite 3x3 utility matrix")
-    return matrix.detach()
+            after64 = (functional_call(head, virtual64, (meta_x,)) - meta_y).square().mean(dim=0)
+        rows64.append(before64 - after64)
+        first = torch.stack([step_size * torch.dot(gradient, meta_gradient)
+                             for meta_gradient in meta_grads])
+        cosine = torch.stack([
+            torch.dot(gradient, meta_gradient) /
+            (torch.linalg.vector_norm(gradient) * torch.linalg.vector_norm(meta_gradient))
+            if bool(torch.linalg.vector_norm(gradient) > 0) and bool(torch.linalg.vector_norm(meta_gradient) > 0)
+            else gradient.new_zeros(())
+            for meta_gradient in meta_grads
+        ])
+        rows_first.append(first)
+        rows_cosine.append(cosine)
+        if include_float32:
+            virtual32 = {name: param.detach() - step_size * (torch.zeros_like(param) if grad is None else grad).detach()
+                         for (name, param), grad in zip(named, grads)}
+            with torch.no_grad():
+                after32 = (functional_call(head, virtual32, (meta_features.detach(),)) - meta_targets).square().mean(dim=0)
+            rows32.append((before32 - after32).double())
+    raw = torch.stack(rows64)
+    directional = torch.stack(rows_cosine)
+    first_order = torch.stack(rows_first)
+    delta_norm = torch.stack(delta_norms)
+    tensors = (raw, directional, first_order, delta_norm)
+    if any(not torch.isfinite(tensor).all() for tensor in tensors):
+        raise FloatingPointError("Nonfinite virtual utility probe")
+    return {"raw_matrix": raw.detach(), "normalized_matrix": directional.detach(),
+            "first_order_matrix": first_order.detach(),
+            "float32_matrix": torch.stack(rows32).detach() if include_float32 else None,
+            "parameter_norm": float(parameter_norm),
+            "virtual_parameter_norm_after": torch.stack(parameter_norms_after).detach(),
+            "virtual_delta_norm": delta_norm.detach(),
+            "relative_virtual_change": (delta_norm / parameter_norm.clamp_min(torch.finfo(torch.float64).tiny)).detach()}
+
+
+def virtual_utility_matrix(head, unlabeled_losses, meta_features, meta_targets, step_size):
+    """Compatibility wrapper: raw M[unlabeled dimension, meta dimension]."""
+    return virtual_utility_probe(head, unlabeled_losses, meta_features, meta_targets,
+                                 step_size)["raw_matrix"]

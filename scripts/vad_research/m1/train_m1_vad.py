@@ -31,7 +31,8 @@ from scripts.vad_research.m0.hpl_core import (
     VADUncertainty, bilevel_head_step, weighted_pseudo_mse,
 )
 from scripts.vad_research.m1.dimensional_utility import (
-    disjoint_meta_batch, per_dimension_unlabeled, virtual_utility_matrix,
+    disjoint_meta_batch, per_dimension_unlabeled, virtual_utility_probe,
+    weighted_dimensional_pseudo_mse,
 )
 from scripts.vad_research.m1.ggr_vlr import merge_head_gradients
 from scripts.vad_research.m1.utility_controller import UtilityController
@@ -158,6 +159,9 @@ def main():
     meta = DataLoader(GoldData(lb), batch_size=args.batch_size, shuffle=True,
                       collate_fn=TextCollator(tokenizer, args.max_length),
                       generator=torch.Generator().manual_seed(23_000+args.seed))
+    utility_meta = DataLoader(GoldData(lb), batch_size=args.batch_size, shuffle=True,
+                              collate_fn=TextCollator(tokenizer, args.max_length),
+                              generator=torch.Generator().manual_seed(29_000+args.seed))
     development = DataLoader(GoldData(dev), batch_size=args.eval_batch_size, shuffle=False,
                              collate_fn=TextCollator(tokenizer, args.max_length))
     unlabeled = DataLoader(UnlabeledData(ulb), batch_size=args.ulb_batch_size, shuffle=True,
@@ -174,6 +178,7 @@ def main():
     head_opt = torch.optim.Adam(model.head.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     unc_opt = torch.optim.Adam(uncertainty.parameters(), lr=args.unc_lr, weight_decay=1e-5) if uncertainty else None
     labeled_iter, meta_iter = forever(labeled), forever(meta)
+    utility_meta_iter = forever(utility_meta)
     unlabeled_iter = forever(unlabeled)
     utility_enabled = args.mode in ('hpl_diagonal', 'hpl_crossdim', 'hpl_crossdim_ggr')
     ggr_enabled = args.mode in ('hpl_ggr', 'hpl_crossdim_ggr')
@@ -191,6 +196,8 @@ def main():
                    'ggr_reference_blob_sha': '1db09f7e76649816526e246d82b54c5f6ef811c8',
                    'ggr_mode': 'vlr', 'ggr_scope': 'head', 'ggr_surgery_alpha': 1.0,
                    'virtual_update': 'stateless head SGD directional probe at head lr',
+                   'utility_signal': 'cosine of unlabeled and TRAIN meta head gradients',
+                   'matrix_orientation': 'rows unlabeled VAD; columns meta VAD',
                    'utility_momentum': controller.momentum if controller else None})
     (out/'run_config.json').write_text(json.dumps(config, indent=2, ensure_ascii=False)+'\n')
     history = []
@@ -229,7 +236,14 @@ def main():
             pd.DataFrame(diagnostics).to_csv(out/'training_diagnostics.csv', index=False)
         pd.DataFrame(utility_rows, columns=['step', 'meta_ids', 'supervised_ids',
                     *[f'M_{d}_{k}' for d in DIMENSIONS for k in DIMENSIONS],
-                    *[f'weight_{d}' for d in DIMENSIONS], 'compute_seconds']).to_csv(
+                    *[f'N_{d}_{k}' for d in DIMENSIONS for k in DIMENSIONS],
+                    *[f'FO_{d}_{k}' for d in DIMENSIONS for k in DIMENSIONS],
+                    *[f'score_{d}' for d in DIMENSIONS],
+                    *[f'weight_{d}' for d in DIMENSIONS],
+                    *[f'virtual_delta_norm_{d}' for d in DIMENSIONS],
+                    *[f'virtual_parameter_norm_after_{d}' for d in DIMENSIONS],
+                    *[f'virtual_relative_change_{d}' for d in DIMENSIONS],
+                    'head_parameter_norm', 'fallback_uniform', 'compute_seconds']).to_csv(
                         out/'utility_matrix_history.csv', index=False)
         print(f'{args.mode} step={step} Dev Macro-MAE={mae:.6f}', flush=True)
         if mae < best-1e-8:
@@ -300,27 +314,47 @@ def main():
                 utility_start = time.perf_counter()
                 if step % args.meta_every == 0:
                     utility_tokens, utility_targets, utility_ids = disjoint_meta_batch(
-                            meta_iter, supervised_ids, desired_size=args.batch_size)
+                            utility_meta_iter, supervised_ids, desired_size=args.batch_size)
                     utility_tokens = move(utility_tokens, device)
                     utility_targets = utility_targets.to(device)
-                    with torch.no_grad():
-                        utility_features = pooled_features(model, utility_tokens)
-                    matrix = virtual_utility_matrix(model.head, dimension_losses,
-                                                    utility_features, utility_targets,
-                                                    head_opt.param_groups[0]['lr'])
-                    weights = controller.update(matrix).to(device=device, dtype=strong.dtype)
+                    with torch.random.fork_rng(devices=devices):
+                        with torch.no_grad():
+                            utility_features = pooled_features(model, utility_tokens)
+                    probe = virtual_utility_probe(model.head, dimension_losses,
+                                                  utility_features, utility_targets,
+                                                  head_opt.param_groups[0]['lr'])
+                    matrix = probe['raw_matrix']
+                    normalized = probe['normalized_matrix']
+                    weights = controller.update(normalized).to(device=device, dtype=strong.dtype)
                     utility_row = {'step': step, 'meta_ids': '|'.join(map(str, utility_ids)),
                                    'supervised_ids': '|'.join(map(str, supervised_ids))}
                     utility_row.update({f'M_{d}_{k}': float(matrix[i, j])
                                         for i, d in enumerate(DIMENSIONS)
                                         for j, k in enumerate(DIMENSIONS)})
+                    utility_row.update({f'N_{d}_{k}': float(normalized[i, j])
+                                        for i, d in enumerate(DIMENSIONS)
+                                        for j, k in enumerate(DIMENSIONS)})
+                    utility_row.update({f'FO_{d}_{k}': float(probe['first_order_matrix'][i, j])
+                                        for i, d in enumerate(DIMENSIONS)
+                                        for j, k in enumerate(DIMENSIONS)})
+                    utility_row.update({f'score_{d}': float(controller.scores()[i])
+                                        for i, d in enumerate(DIMENSIONS)})
                     utility_row.update({f'weight_{d}': float(weights[i])
                                         for i, d in enumerate(DIMENSIONS)})
+                    utility_row.update({f'virtual_delta_norm_{d}': float(probe['virtual_delta_norm'][i])
+                                        for i, d in enumerate(DIMENSIONS)})
+                    utility_row.update({f'virtual_parameter_norm_after_{d}': float(probe['virtual_parameter_norm_after'][i])
+                                        for i, d in enumerate(DIMENSIONS)})
+                    utility_row.update({f'virtual_relative_change_{d}': float(probe['relative_virtual_change'][i])
+                                        for i, d in enumerate(DIMENSIONS)})
+                    utility_row['head_parameter_norm'] = probe['parameter_norm']
+                    utility_row['fallback_uniform'] = int(controller.fallback())
                     utility_row['compute_seconds'] = time.perf_counter() - utility_start
                     utility_rows.append(utility_row)
+                    diagnostic['utility_fallback_uniform'] = utility_row['fallback_uniform']
                 else:
                     weights = controller.weights().to(device=device, dtype=strong.dtype)
-                unlabeled_loss = (dimension_losses * weights).mean()
+                unlabeled_loss = weighted_dimensional_pseudo_mse(strong, weak, logvar.detach(), weights)
                 extra_compute_seconds += time.perf_counter() - utility_start
             else:
                 weights = torch.ones(3, device=device, dtype=strong.dtype)
