@@ -1,0 +1,18 @@
+{
+  "protocol_version": "train-only-v1-locked-before-computation",
+  "source_commit": "e7db75f530cc3fafc08b9be28c2e64e200e464d2",
+  "seed": 0,
+  "splits_used": ["labeled_train", "unlabeled_train"],
+  "forbidden_splits": ["dev", "test"],
+  "l2_normalize": true,
+  "outer_cv": {"type": "KFold", "n_splits": 5, "shuffle": true, "random_state": 0},
+  "gamma": {"rule": "ln(2) / median(nonzero squared L2 distances)", "source": "labeled fit fold covariates only", "final_source": "all 500 labeled TRAIN covariates", "pair_sample_count": 100000, "pair_rng_seed_base": 20261028, "fold_seed": "base + fold_index", "sample_with_replacement": true, "exclude_self_and_zero": true},
+  "nystrom": {"landmarks": 256, "anchor_source": "labeled fit fold only", "anchor_rng_seed": "seed + fold_index", "same_anchors_b1_b2": true, "jitter": 1e-8, "diagnostic_probe": "first 128 fit-fold covariates", "diagnostic_metrics": ["landmark_min_eigenvalue", "clipped_eigenvalues", "rank64_relative_kernel_frobenius_error", "all_finite"]},
+  "rank_candidates": [8, 16, 32, 64],
+  "rank_selection": "For each rank choose B1 alpha minimizing 5-fold TRAIN validation macro-MAE; choose rank with minimum B1 score, tie lower rank. B2 scores cannot select rank. Both modes share selected rank.",
+  "ridge_alphas": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0],
+  "alpha_selection": "At shared rank, each mode independently chooses alpha minimizing its own 5-fold TRAIN validation macro-MAE; tie smaller alpha.",
+  "oof": "At selected shared rank and each mode's locked alpha, concatenate all five held-out TRAIN predictions; folds and feature fits are identical to selection stage. Reused folds mean estimates are selection-conditioned, not external validation.",
+  "gate": {"no_go": "B2 macro-MAE >= B1 macro-MAE", "go": "B2 macro-MAE improvement >= 0.002 original VAD units; at least 4 of 5 paired folds improve; no dimension MAE worsens by > 0.005; no dimension CCC drops by > 0.02; each B2/B1 prediction standard-deviation ratio >= 0.5; all outputs finite", "otherwise": "INCONCLUSIVE"},
+  "no_rescue": "No candidate expansion, DEV tuning, alternative fold split, or rerun based on result."
+}
