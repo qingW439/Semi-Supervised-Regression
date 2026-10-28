@@ -12,6 +12,7 @@ sys.path.insert(0,str(REPO))
 from semilearn.datasets.nlp_datasets.emobank import GoldData, TextCollator, NORM_COLUMNS, read_gold
 from scripts.vad_research.train_roberta_vad_supervised import RobertaVADRegressor, sha256_file
 from scripts.vad_research.m1_v3.calibration import normalize_features
+from scripts.vad_research.m1_v3.cpu_resources import require_cpu_memory
 
 def partition(ids,seed):
     if len(ids)!=500 or len(set(ids))!=500: raise ValueError('Expected 500 unique TRAIN IDs')
@@ -34,26 +35,33 @@ def predict(model,frame,collator,device):
             parts.append(model(**tokens).clamp(0,1).cpu().numpy())
     return np.concatenate(parts)
 
+def supervised_update(model, optimizer, tokens, labels, device):
+    """Exactly one P1/P2 supervised control update, shared by audit and benchmark."""
+    model.train()
+    tokens={k:v.to(device) for k,v in tokens.items()}
+    optimizer.zero_grad(set_to_none=True)
+    F.l1_loss(model(**tokens),labels.to(device)).backward()
+    torch.nn.utils.clip_grad_norm_(model.parameters(),1.0)
+    optimizer.step()
+
 def fit_reference(frame,model_path,collator,device,seed):
     seed_all(seed)
     model=RobertaVADRegressor(model_path,dropout=0.1,offline=True).to(device)
     loader=DataLoader(GoldData(frame),batch_size=16,shuffle=True,collate_fn=collator,
                       generator=torch.Generator().manual_seed(seed+17))
     optimizer=torch.optim.AdamW(model.parameters(),lr=2e-5,weight_decay=0.01)
-    def update(tokens,labels):
-        model.train(); tokens={k:v.to(device) for k,v in tokens.items()}
-        optimizer.zero_grad(set_to_none=True)
-        F.l1_loss(model(**tokens),labels.to(device)).backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(),1.0); optimizer.step()
-    for _ in range(20):
-        for tokens,labels,_ in loader: update(tokens,labels)
+    print(f'REFERENCE seed={seed} fit_count={len(frame)} P1_epochs=20 P2_steps=160',flush=True)
+    for epoch in range(1,21):
+        for tokens,labels,_ in loader: supervised_update(model,optimizer,tokens,labels,device)
+        print(f'REFERENCE seed={seed} p1_epoch={epoch}/20',flush=True)
     optimizer=torch.optim.AdamW(model.parameters(),lr=5e-6,weight_decay=0.01)
     iterator=iter(loader)
-    for _ in range(160):
+    for step in range(1,161):
         try: tokens,labels,_=next(iterator)
         except StopIteration:
             iterator=iter(loader); tokens,labels,_=next(iterator)
-        update(tokens,labels)
+        supervised_update(model,optimizer,tokens,labels,device)
+        if step%32==0: print(f'REFERENCE seed={seed} p2_step={step}/160',flush=True)
     return model.eval()
 
 def extract_features(frame,model_path,tokenizer,device):
@@ -89,8 +97,18 @@ def main():
     if a.out.exists(): raise FileExistsError(f'Output exists: {a.out}')
     if a.device=='cuda' and not torch.cuda.is_available(): raise RuntimeError('CUDA unavailable')
     device=torch.device('cuda' if a.device!='cpu' and torch.cuda.is_available() else 'cpu')
+    if device.type=='cpu': require_cpu_memory()
     tokenizer=AutoTokenizer.from_pretrained(a.pretrain_path,local_files_only=True,use_fast=True)
     collator=TextCollator(tokenizer,128)
+    a.out.mkdir(parents=True)
+    commit=subprocess.run(['git','rev-parse','HEAD'],cwd=REPO,capture_output=True,text=True,check=True).stdout.strip()
+    config={'mode':'full_audit','seed':a.seed,'device':str(device),'git_commit':commit,
+      'train_path':str(a.train),'train_sha256':sha256_file(a.train),
+      'pretrain_path':str(a.pretrain_path),'fit_count':400,'audit_count':100,
+      'oof_folds':5,'p1_epochs':20,'p2_steps':160,'batch_size':16,
+      'p1_lr':2e-5,'p2_lr':5e-6,'weight_decay':0.01,'clip_grad_norm':1.0,
+      'dropout':0.1,'model':'pretrained RoBERTa + P1 VAD head, refit per fold'}
+    (a.out/'run_config.json').write_text(json.dumps(config,indent=2)+'\n',encoding='utf-8')
     features=extract_features(frame.loc[:,['id','text']],str(a.pretrain_path),tokenizer,device)
     fit_frame=frame.iloc[fit].reset_index(drop=True)
     oof=np.full((400,3),np.nan,dtype=np.float64); provenance=[]
@@ -101,15 +119,20 @@ def main():
         if set(train_ids)&set(held_ids): raise AssertionError('OOF overlap')
         model=fit_reference(fit_frame.iloc[train_pos],str(a.pretrain_path),collator,device,a.seed+100+index)
         oof[held]=predict(model,fit_frame.iloc[held],collator,device)
-        provenance.append({'fold':index,'train_ids':train_ids,'held_out_ids':held_ids})
+        fold_path=a.out/f'oof_fold_{index}.pth'
+        torch.save({'model':model.state_dict(),'train_ids':train_ids,
+                    'held_out_ids':held_ids,'seed':a.seed+100+index},fold_path)
+        provenance.append({'fold':index,'train_ids':train_ids,'held_out_ids':held_ids,
+                           'seed':a.seed+100+index,'checkpoint':fold_path.name,
+                           'checkpoint_sha256':sha256_file(fold_path)})
+        (a.out/'fold_provenance.json').write_text(json.dumps(provenance,indent=2)+'\n',encoding='utf-8')
         del model
         if device.type=='cuda': torch.cuda.empty_cache()
         print(f'OOF fold {index+1}/5 complete',flush=True)
     if not np.isfinite(oof).all(): raise RuntimeError('Incomplete OOF')
     model=fit_reference(fit_frame,str(a.pretrain_path),collator,device,a.seed+200)
     reference=predict(model,frame.iloc[audit],collator,device)
-    a.out.mkdir(parents=True)
-    torch.save({'model':model.state_dict(),'train_ids':fit_ids},a.out/'reference_400.pth')
+    torch.save({'model':model.state_dict(),'train_ids':fit_ids,'seed':a.seed+200},a.out/'reference_400.pth')
     np.savez_compressed(a.out/'audit_inputs.npz',fit_ids=np.asarray(fit_ids),audit_ids=np.asarray(audit_ids),
       fit_features=features[fit],audit_features=features[audit],
       fit_labels=fit_frame.loc[:,NORM_COLUMNS].to_numpy(np.float64),
@@ -117,8 +140,8 @@ def main():
       oof_predictions=oof,reference_audit=reference)
     weight_path=next((a.pretrain_path/n for n in ('model.safetensors','pytorch_model.bin') if (a.pretrain_path/n).is_file()),None)
     if weight_path is None: raise FileNotFoundError('Pretrained RoBERTa weights missing')
-    commit=subprocess.run(['git','rev-parse','HEAD'],cwd=REPO,capture_output=True,text=True,check=True).stdout.strip()
     manifest={'seed':a.seed,'train_sha256':sha256_file(a.train),'git_commit':commit,
+      'run_config_sha256':sha256_file(a.out/'run_config.json'),
       'pretrain_weight_sha256':sha256_file(weight_path),
       'pretrain_path':str(a.pretrain_path),'pretrain_config_sha256':sha256_file(a.pretrain_path/'config.json'),
       'reference_train_ids':fit_ids,'audit_ids':audit_ids,'folds':provenance,

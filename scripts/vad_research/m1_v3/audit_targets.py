@@ -59,6 +59,12 @@ def main():
     a=p.parse_args()
     if a.out.exists(): raise FileExistsError(f'Output exists: {a.out}')
     manifest=json.loads((a.inputs/'manifest.json').read_text(encoding='utf-8'))
+    if sha256_file(a.inputs/'run_config.json')!=manifest['run_config_sha256']:
+        raise ValueError('Run config hash mismatch')
+    for fold in manifest['folds']:
+        fold_path=a.inputs/fold['checkpoint']
+        if fold_path.name!=f"oof_fold_{fold['fold']}.pth" or sha256_file(fold_path)!=fold['checkpoint_sha256']:
+            raise ValueError('OOF checkpoint hash mismatch')
     if sha256_file(a.train)!=manifest['train_sha256']:
         raise ValueError('TRAIN split hash mismatch')
     if sha256_file(a.inputs/'reference_400.pth')!=manifest['reference_checkpoint_sha256']:
