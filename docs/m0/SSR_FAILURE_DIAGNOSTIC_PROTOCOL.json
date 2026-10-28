@@ -1,0 +1,17 @@
+{
+  "version": "train-only-fixed-v1",
+  "source_commit": "9b2f4ebd9c5810acc1558c42aee69cc391d528d3",
+  "representation": "seed0 frozen pretrained RoBERTa-base attention-mask mean pooling cache, L2 normalized",
+  "strict_split": "existing P3B seed0 400 reference / 100 held-out probe; no probe labels in neighbor selection",
+  "k": 8,
+  "representation_distance": "cosine = 1 - dot(L2 normalized vectors)",
+  "target_distance": "absolute original-scale V/A/D difference; macro mean of three",
+  "random_neighbor_control": "exact expected mean over all 400 reference labels plus one fixed 8-of-400 without-replacement draw per probe",
+  "random_seed": 20261028,
+  "label_permutations": 1000,
+  "permutation_rule": "permute only 400 reference label rows; keep embedding neighbors and 100 probe labels fixed",
+  "query_bootstrap_replicates": 10000,
+  "coverage": "8th nearest 3D normalized-label Euclidean radius; sparse threshold is 75th percentile of leave-one-out radii among 400 reference labels; apply to 100 held-out true labels only for evaluation",
+  "prediction_source": "existing P3B 400-to-100 held-out predictions; spectral B1/B2 500 OOF only as separate selection-conditioned context",
+  "forbidden": ["DEV threshold selection", "TEST", "model training", "GPU", "new SSL method", "post-result k search"]
+}

@@ -1,0 +1,14 @@
+{
+  "version": "single-fixed-negative-control-v1",
+  "source_spectral_gate_commit": "9b2f4ebd9c5810acc1558c42aee69cc391d528d3",
+  "data": "seed0 TRAIN-only frozen RoBERTa features and existing five-fold spectral gate",
+  "folds": "KFold(5, shuffle=True, random_state=0)",
+  "gamma": "reuse each fold gamma from SPECTRAL_TRAIN_ONLY_PARAMS.json",
+  "landmarks": 256,
+  "anchor_seed": "fold_index, same labeled fit-fold anchors for B1/real-B2/control",
+  "rank": 64,
+  "ridge_alpha": 100,
+  "control": "replace 7562 real unlabeled vectors by 7562 with-replacement draws from the 400 labeled fit-fold vectors; RNG seed 314159+fold_index",
+  "comparisons": ["B1 OOF reproduction", "B2 OOF reproduction", "control OOF", "B1/B2 and B1/control rank64 projector overlap", "per-dimension prediction variance and MAE"],
+  "no_selection": "one fixed control; no rank, alpha, gamma, K, or seed search; no DEV/TEST"
+}
