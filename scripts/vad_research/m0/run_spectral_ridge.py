@@ -32,6 +32,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--budget', type=int, choices=(500,), default=500)
     parser.add_argument('--seed', type=int, choices=(0, 1, 2), default=0)
+    parser.add_argument('--mode', choices=('b0', 'b1', 'b2'), required=True)
     parser.add_argument('--feature-dir', type=Path)
     parser.add_argument('--out', type=Path)
     parser.add_argument('--check-only', action='store_true')
@@ -79,9 +80,11 @@ def checked_features(feature_dir, budget, seed):
 def spectral_pair(mode, x_train, x_valid, x_unlabeled, *, gamma, rank, landmarks, seed):
     if mode=='b0':
         return x_train, x_valid
+    anchor_idx=np.random.default_rng(seed).choice(len(x_train),size=landmarks,replace=False)
+    shared_anchors=x_train[anchor_idx]
     basis_covariates=x_train if mode=='b1' else np.concatenate((x_train,x_unlabeled))
     basis=fit_nystrom_spectral(basis_covariates,gamma=gamma,rank=rank,
-                               landmarks=landmarks,seed=seed)
+                               landmarks=landmarks,seed=seed,external_landmarks=shared_anchors)
     return basis.transform(x_train),basis.transform(x_valid)
 
 
@@ -123,7 +126,7 @@ def main():
     predictions={'id':arrays['dev_ids']}
     for index,dim in enumerate(DIMENSIONS):
         predictions[f'gold_{dim}']=y_dev[:,index]*4+1
-    for mode in ('b0','b1','b2'):
+    for mode in (args.mode,):
         alpha,cv_scores=select_alpha(mode,x_train,y_train,x_unlabeled,
                                      gamma=args.gamma,rank=args.rank,
                                      landmarks=args.landmarks,seed=args.seed)
@@ -143,7 +146,7 @@ def main():
     manifest={'protocol':'pretrained frozen RoBERTa; L2 normalize; train-only 5-fold CV',
               'spectral_approximation':'Nyström, not full kernel eigendecomposition',
               'rank':args.rank,'landmarks':args.landmarks,'gamma':args.gamma,
-              'seed':args.seed,'alphas':ALPHAS,'feature_metadata':metadata,
+              'seed':args.seed,'mode':args.mode,'alphas':ALPHAS,'feature_metadata':metadata,
               'results':results}
     (args.out/'comparison.json').write_text(json.dumps(manifest,indent=2)+'\n')
     pd.DataFrame(predictions).to_csv(args.out/'dev_predictions.csv',index=False)
