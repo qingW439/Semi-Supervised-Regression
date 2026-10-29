@@ -37,6 +37,8 @@ from scripts.emobank.train_emobank_supervised import metric_report  # noqa: E402
 from scripts.vad_research.train_roberta_vad_supervised import (  # noqa: E402
     load_checked_splits, set_seed, sha256_file, git_commit,
 )
+from scripts.vad_research.retrieval_bank import RetrievalBank  # noqa: E402
+from scripts.vad_research.local_pl_calib import local_calibrate  # noqa: E402
 
 DATA_ROOT = REPO.parent / 'data' / 'emobank_processed'
 MODEL_DIR = REPO.parent / 'pretrained' / 'roberta-base'
@@ -209,6 +211,8 @@ def cli():
     p.add_argument('--arc-ulb-ratio', type=float, default=1.0)
     p.add_argument('--p-cutoff', type=float, default=0.95)
     p.add_argument('--reg-target', choices=('rda', 'raw', 'rpl'), default='rda')
+    p.add_argument('--pl-calib', choices=('none', 'rda', 'local'), default=None,
+                   help='RDA / local feature-conditional calibration / no calibration')
     p.add_argument('--rda-every', type=int, default=32)
     p.add_argument('--unsup-warmup', type=float, default=0.4)
     p.add_argument('--ulb-loss-ratio', type=float, default=1.0)
@@ -226,6 +230,9 @@ def cli():
     # retrieval calibration (LA-PLC / VRRC)
     p.add_argument('--knn-calib', type=float, default=0.0)
     p.add_argument('--knn-k', type=int, default=20)
+    p.add_argument('--knn-alpha', type=float, default=0.4)
+    p.add_argument('--knn-tau', type=float, default=0.1)
+    p.add_argument('--knn-c0', type=float, default=0.3)
     p.add_argument('--knn-temp', type=float, default=0.1)
     p.add_argument('--knn-conf-floor', type=float, default=0.3)
     p.add_argument('--eval-knn-alpha', type=float, default=0.0)
@@ -246,6 +253,7 @@ def cli():
 # --------------------------------------------------------------------------- train
 def main():
     a = cli()
+    pl_mode = a.pl_calib or {'rda': 'rda', 'rpl': 'local', 'raw': 'none'}[a.reg_target]
     set_seed(a.seed)
     lb, dev, ulb, paths = load_checked_splits(a)
     ckpt_path = a.p1_dir / 'model_best.pth'
@@ -282,13 +290,15 @@ def main():
                         collate_fn=ulb_collate(tok, 128),
                         generator=torch.Generator().manual_seed(19_000 + a.seed))
 
-    # ---- retrieval bank (LA-PLC / VRRC)
+    # ---- frozen labeled retrieval bank (locally calibrated pseudo-labels)
     l_feat = l_y = u_feat = dev_feat = None
+    bank = None
     id2row = {k: i for i, k in enumerate(ulb['id'].tolist())}
-    if a.knn_calib > 0 or a.eval_knn_alpha > 0 or a.reg_target == 'rpl':
+    if pl_mode == 'local' or a.eval_knn_alpha > 0:
         l_feat = encode_texts(model.encoder, lb['text'].tolist(), tok, device).to(device)
         l_y = torch.tensor(lb.loc[:, list(NORM_COLUMNS)].to_numpy(dtype=np.float32), device=device)
-        if a.reg_target == 'rpl' or a.knn_calib > 0:
+        bank = RetrievalBank(l_feat, l_y)
+        if pl_mode == 'local':
             u_feat = encode_texts(model.encoder, ulb['text'].tolist(), tok, device).to(device)
         if a.eval_knn_alpha > 0:
             dev_feat = encode_texts(model.encoder, dev['text'].tolist(), tok, device).to(device)
@@ -296,7 +306,7 @@ def main():
     # ---- RDA initial table from the frozen teacher
     pseudo_raw = pseudo_refine = None
     sorted_lb = None
-    if a.reg_target == 'rda':
+    if pl_mode == 'rda':
         with torch.inference_mode():
             chunks = []
             for bt, _ in ulb_dl:
@@ -326,9 +336,8 @@ def main():
         y, p, ids = predict_mean(model, dev_dl, device)
         if dev_feat is not None:
             pt = torch.tensor(p, device=device)
-            idx = torch.arange(pt.shape[0], device=device)
-            pt = knn_calibrate(pt, idx, dev_feat, l_feat, l_y,
-                               a.eval_knn_k, a.knn_temp, a.eval_knn_alpha, a.knn_conf_floor)
+            pt = local_calibrate(pt, dev_feat, bank, k=a.eval_knn_k, tau=a.knn_tau,
+                                 alpha=a.eval_knn_alpha, c0=a.knn_c0)
             p = pt.cpu().numpy()
         if a.eval_scale != 1.0:
             p = p.mean(0) + (p - p.mean(0)) * a.eval_scale
@@ -380,19 +389,16 @@ def main():
 
         rows = torch.tensor([id2row[i] for i in ulb_ids], device=device)
 
-        # ---- regression target (RDA / LA-PLC / raw teacher)
-        if a.reg_target == 'rda':
-            src = reg_t_w
-            if a.knn_calib > 0:
-                src = knn_calibrate(reg_t_w.detach(), rows, u_feat, l_feat, l_y,
-                                    a.knn_k, a.knn_temp, a.knn_calib, a.knn_conf_floor)
-            pseudo_raw[rows.cpu()] = src.detach().cpu()
+        # ---- regression target: RDA / local conditional calibration / raw teacher
+        if pl_mode == 'rda':
+            pseudo_raw[rows.cpu()] = reg_t_w.detach().cpu()
             if step % a.rda_every == 0:
                 pseudo_refine = rda_align(pseudo_raw, sorted_lb)
             target = pseudo_refine[rows.cpu()].to(device)
-        elif a.reg_target == 'rpl':
-            target = knn_calibrate(reg_t_w.detach(), rows, u_feat, l_feat, l_y,
-                                   a.knn_k, a.knn_temp, a.knn_calib, a.knn_conf_floor)
+        elif pl_mode == 'local':
+            target = local_calibrate(reg_t_w.detach(), u_feat[rows], bank,
+                                     k=a.knn_k, tau=a.knn_tau,
+                                     alpha=a.knn_alpha, c0=a.knn_c0)
         else:
             target = reg_t_w.detach()
 

@@ -1,0 +1,26 @@
+{
+  "decision": "NO-GO",
+  "control_mae": 0.1782643583615621,
+  "rda_mae": 0.17801115206877394,
+  "local_mae": 0.1782643583615621,
+  "local_minus_control": 0.0,
+  "control_ccc": 0.4327796559024453,
+  "local_ccc": 0.4327796559024453,
+  "control_r2": 0.16016056523861022,
+  "local_r2": 0.16016056523861022,
+  "dim_mae_delta": {
+    "V": 0.0,
+    "A": 0.0,
+    "D": 0.0
+  },
+  "improved_dims": 0,
+  "checks": {
+    "mae_improve_ge_threshold": false,
+    "ccc_drop_within": true,
+    "r2_drop_within": true,
+    "improved_dims_ge": false,
+    "worst_dim_drop_within": true,
+    "best_step_not_zero": false,
+    "beats_rda": false
+  }
+}

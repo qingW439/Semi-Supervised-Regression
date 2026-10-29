@@ -2,7 +2,7 @@
 
 日期：2026-10-29  
 实验目录（主机）：`/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-vadswap`（从主项目复制，未改动原项目）  
-数据：EmoBank VAD，`data/emobank_processed`，TRAIN 8062（lb 250/500/1000 + ulb），DEV 1000，TEST 不读取。
+数据：EmoBank VAD，`data/emobank_processed`，TRAIN 8062（lb 250/500/1000 + ulb），DEV 1000；TEST 仅在 5.3 节做一次性评估，训练与选模全程不读取。
 
 ---
 
@@ -316,7 +316,28 @@ $ENV scripts/vad_research/train_vad_modules.py \
 
 ---
 
-## 7. 结果梳理与论文逻辑
+### 5.4 LC-RankUp-VAD：RDA → 局部条件校准的干净替换（seed0 NO-GO）
+
+独立 worktree：`/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-lcrankup`，分支 `m1/lc-rankup-vad`。
+
+- 新增 `scripts/vad_research/retrieval_bank.py`、`local_pl_calib.py`；
+- `train_rankup3d.py` 增加 `--pl-calib {none,rda,local}`、`--knn-alpha/tau/c0`；
+- CPU contract tests：**6 passed**；
+- 5-step / 20-step smoke 正常。
+
+seed0 完整 160 步（ARC 0.05，其余一致）：
+
+| 变体 | Macro-MAE | Macro-CCC | Macro-R² | best step |
+|---|---|---|---|---|
+| C0（无校准） | 0.178264 | 0.4328 | 0.1602 | 0 |
+| C1（原始 RDA） | 0.178011 | 0.3819 | 0.1501 | 96 |
+| M1（局部条件校准） | 0.178264 | 0.4328 | 0.1602 | 0 |
+
+Gate 结果：**NO-GO**（MAE 无改善、0/3 维改善、best step = 0、未超过 RDA）。
+
+解释：RankUp-3D 基座本身在 VAD 上不稳定；把 RDA 单独换成局部校准**不能修复基座**。此前 RankUp-3D 上的正增益来自 GCF + VRRC（0.17025），不是“RDA→local”这一步本身。按预注册方案，LC-RankUp 不进入 seed1/2；下一步执行唯一备选 **E-HPL-VAD**。
+
+
 
 ### 7.1 一条主线
 
@@ -324,7 +345,7 @@ $ENV scripts/vad_research/train_vad_modules.py \
 
 ### 7.2 三层结论
 
-1. **框架层（负结果）**：忠实复现的 RankUp-3D 在 EmoBank 上 0.1780，低于 P2 的 0.1755；ARC 全权重退化到 0.202；1000 步无效；HPL（2025）bilevel 0.1783；AGDS 0.1713–0.1721 不如 GCF。→ **近三年 SSR 框架的增益不能自动迁移到三维 VAD。**
+1. **框架层（负结果）**：忠实复现的 RankUp-3D 在 EmoBank 上 0.1780，低于 P2 的 0.1755；ARC 全权重退化到 0.202；1000 步无效；HPL（2025）bilevel 0.1783；AGDS 0.1713–0.1721 不如 GCF；LC-RankUp（RDA→local）seed0 NO-GO。→ **近三年 SSR 框架的增益不能自动迁移到三维 VAD。**
 2. **模块层（正结果）**：GCF（2026）+ LA-PLC + VRRC 把 RankUp-3D 从 0.1780 提升到 0.17025（DEV，三种子），TEST 0.17294 对 P2 0.17726；CCC/R² 同时改善。
 3. **机理层**：LA-PLC 把教师伪标签在 DEV 上的 MAE 从 0.1783 降到 0.1687（-5.4%）；VRRC 把预测方差拉回，CCC/R² 提升。
 
@@ -347,8 +368,9 @@ $ENV scripts/vad_research/train_vad_modules.py \
 
 ## 8. 待完成
 
-1. 仅一次 TEST 评估（`test_gold.parquet`），用于论文最终表；当前所有结果均未读取 TEST。
-2. 领域迁移（中英文旅游评论/游记）实验。
-3. 敏感性分析：k / α / s 的网格与标注预算-收益曲线。
-4. 与 RankUp、HPL 官方实现的公平对比（当前 HPL 为仓库内复现版本，无增益）。
-5. 消融“固定 gate vs 邻域离散度 gate”，检验逐维度可靠性门控是否进一步增益。
+1. **E-HPL-VAD（唯一备选）**：HPL 基座 + 共享 encoder、双回归 head × 每 head 2 次 dropout 的 ensemble pseudo-target（mean/variance），C0/C1/M1 seed0 gate。
+2. TEST 已在 5.3 节做过一次性评估（RCMT/control 一次，RankUp-3D 一次）；LC-RankUp 这轮起不再读取 TEST，直到最终模型冻结后再评一次。
+3. 领域迁移（中英文旅游评论/游记）实验。
+4. 敏感性分析：k / α / s 的网格与标注预算-收益曲线。
+5. 与 RankUp、HPL 官方实现的公平对比（当前 HPL 为仓库内复现版本，无增益）。
+6. 消融“固定 gate vs 邻域离散度 gate”，检验逐维度可靠性门控是否进一步增益。
