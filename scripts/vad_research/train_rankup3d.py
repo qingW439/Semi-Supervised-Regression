@@ -213,9 +213,16 @@ def cli():
     p.add_argument('--unsup-warmup', type=float, default=0.4)
     p.add_argument('--ulb-loss-ratio', type=float, default=1.0)
     # GaussianMatch-style filter
-    p.add_argument('--filter', choices=('arc', 'gcf', 'none'), default='arc')
+    p.add_argument('--filter', choices=('arc', 'gcf', 'agds', 'none'), default='arc')
     p.add_argument('--gcf-views', type=int, default=3)
     p.add_argument('--gcf-tau', type=float, default=0.05)
+    p.add_argument('--agds-views', type=int, default=3)
+    p.add_argument('--agds-lambda0', type=float, default=3.0)
+    p.add_argument('--agds-lambda1', type=float, default=1.0)
+    p.add_argument('--agds-warm', type=float, default=0.5)
+    p.add_argument('--agds-ema', type=float, default=0.9)
+    p.add_argument('--agds-soft', action='store_true', default=True)
+    p.add_argument('--agds-hard', dest='agds_soft', action='store_false')
     # retrieval calibration (LA-PLC / VRRC)
     p.add_argument('--knn-calib', type=float, default=0.0)
     p.add_argument('--knn-k', type=int, default=20)
@@ -310,6 +317,7 @@ def main():
 
     history = []
     best, best_step = float('inf'), -1
+    scale_ema = None
     lb_iter = forever(lb_dl)
     ulb_iter = forever(ulb_dl)
 
@@ -390,7 +398,7 @@ def main():
 
         warm = min(step / max(1.0, a.unsup_warmup * a.steps), 1.0)
 
-        # GaussianMatch-style multi-view consistency weight
+        # GaussianMatch-style multi-view consistency filter
         if a.filter == 'gcf':
             views = []
             for _ in range(a.gcf_views):
@@ -400,6 +408,23 @@ def main():
             reg_weak = views.mean(0)
             sigma = views.std(0, unbiased=False)
             weight = torch.exp(-sigma / a.gcf_tau)
+        elif a.filter == 'agds':
+            views = []
+            for _ in range(a.agds_views):
+                rv, _ = model(**mask_tokens(ulb_tok_w, tok, a.mask_prob))
+                views.append(rv)
+            views = torch.stack(views)                 # [K,B,3]
+            reg_weak = views.mean(0)
+            sigma = views.std(0, unbiased=False)       # [B,3]
+            cur = sigma.mean(0).detach()
+            if scale_ema is None:
+                scale_ema = cur
+            else:
+                scale_ema = a.agds_ema * scale_ema + (1.0 - a.agds_ema) * cur
+            lam = a.agds_lambda0 + (a.agds_lambda1 - a.agds_lambda0) * min(
+                step / max(1.0, a.agds_warm * a.steps), 1.0)
+            ratio = sigma / (lam * scale_ema.clamp_min(1e-6))
+            weight = torch.exp(-0.5 * ratio ** 2) if a.agds_soft else (ratio <= 1.0).float()
         else:
             reg_weak, _ = model(**ulb_tok_w)
             weight = None

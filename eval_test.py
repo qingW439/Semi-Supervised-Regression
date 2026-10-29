@@ -66,7 +66,8 @@ def main():
     tok = AutoTokenizer.from_pretrained(str(a.pretrain_path), local_files_only=True, use_fast=True)
     model = RobertaVADRegressor(str(a.pretrain_path), dropout=0.1, offline=True).to(device)
     ckpt = torch.load(a.ckpt, map_location='cpu', weights_only=False)
-    model.load_state_dict(ckpt['model'], strict=True)
+    state = {k: v for k, v in ckpt['model'].items() if not k.startswith('arc.')}
+    model.load_state_dict(state, strict=True)
     model.eval()
 
     dl = DataLoader(GoldData(test), batch_size=32, shuffle=False,
