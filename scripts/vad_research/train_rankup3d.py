@@ -39,6 +39,9 @@ from scripts.vad_research.train_roberta_vad_supervised import (  # noqa: E402
 )
 from scripts.vad_research.retrieval_bank import RetrievalBank  # noqa: E402
 from scripts.vad_research.local_pl_calib import local_calibrate  # noqa: E402
+from scripts.vad_research.arc_pseudo_calibrator import (  # noqa: E402
+    mc_predict, calibrated_pseudo_targets, build_calibrated_pseudo_ranks,
+)
 
 DATA_ROOT = REPO.parent / 'data' / 'emobank_processed'
 MODEL_DIR = REPO.parent / 'pretrained' / 'roberta-base'
@@ -213,6 +216,13 @@ def cli():
     p.add_argument('--reg-target', choices=('rda', 'raw', 'rpl'), default='rda')
     p.add_argument('--pl-calib', choices=('none', 'rda', 'local'), default=None,
                    help='RDA / local feature-conditional calibration / no calibration')
+    p.add_argument('--arc-pseudo-source', choices=('original', 'simreg_calibrated'),
+                   default='original')
+    p.add_argument('--mc-passes', type=int, default=5)
+    p.add_argument('--simreg-beta', type=float, default=0.6)
+    p.add_argument('--simreg-temp', type=float, default=1.0)
+    p.add_argument('--simreg-percentile', type=float, default=95.0)
+    p.add_argument('--diag-arc', action='store_true')
     p.add_argument('--rda-every', type=int, default=32)
     p.add_argument('--unsup-warmup', type=float, default=0.4)
     p.add_argument('--ulb-loss-ratio', type=float, default=1.0)
@@ -294,11 +304,11 @@ def main():
     l_feat = l_y = u_feat = dev_feat = None
     bank = None
     id2row = {k: i for i, k in enumerate(ulb['id'].tolist())}
-    if pl_mode == 'local' or a.eval_knn_alpha > 0:
+    if pl_mode == 'local' or a.eval_knn_alpha > 0 or a.arc_pseudo_source == 'simreg_calibrated':
         l_feat = encode_texts(model.encoder, lb['text'].tolist(), tok, device).to(device)
         l_y = torch.tensor(lb.loc[:, list(NORM_COLUMNS)].to_numpy(dtype=np.float32), device=device)
         bank = RetrievalBank(l_feat, l_y)
-        if pl_mode == 'local':
+        if pl_mode == 'local' or a.arc_pseudo_source == 'simreg_calibrated':
             u_feat = encode_texts(model.encoder, ulb['text'].tolist(), tok, device).to(device)
         if a.eval_knn_alpha > 0:
             dev_feat = encode_texts(model.encoder, dev['text'].tolist(), tok, device).to(device)
@@ -328,6 +338,7 @@ def main():
     history = []
     best, best_step = float('inf'), -1
     scale_ema = None
+    simreg_threshold = None
     lb_iter = forever(lb_dl)
     ulb_iter = forever(ulb_dl)
 
@@ -359,6 +370,11 @@ def main():
                            out / 'model_best.pth')
             (out / 'dev_metrics_best.json').write_text(
                 json.dumps({'step': step, 'metrics': m}, indent=2) + '\n', encoding='utf-8')
+            frame = pd.DataFrame({'id': ids})
+            for idx, d in enumerate(DIMENSIONS):
+                frame[f'gold_{d}'] = y[:, idx] * 4 + 1
+                frame[f'pred_{d}'] = p[:, idx] * 4 + 1
+            frame.to_csv(out / 'dev_predictions_best.csv', index=False)
 
     evaluate_and_save(0)
     for step in range(1, a.steps + 1):
@@ -438,17 +454,38 @@ def main():
         unsup = ((reg_weak - target).abs() * (weight if weight is not None else 1.0)).mean()
         arc_unsup = torch.zeros((), device=device)
         if a.arc:
-            for d in range(3):
-                tp = pair_logits(arc_t_w, d)
-                prob = torch.softmax(tp, dim=-1)
-                conf, pseudo = prob.max(-1)
-                mask = conf > a.p_cutoff
-                if mask.sum() == 0:
-                    continue
-                sp = pair_logits(arc_s, d)
-                onehot = F.one_hot(pseudo, 2).to(sp.dtype)
-                ce = -(onehot * F.log_softmax(sp, -1)).sum(-1)
-                arc_unsup = arc_unsup + (ce * mask).sum() / mask.sum().clamp_min(1.0)
+            if a.arc_pseudo_source == 'simreg_calibrated':
+                mc = mc_predict(teacher, ulb_tok_w, a.mc_passes)
+                calib, reliable, thr, new_thr, unc = calibrated_pseudo_targets(
+                    mc, u_feat[rows], l_feat, l_y,
+                    beta=a.simreg_beta, temperature=a.simreg_temp,
+                    threshold=simreg_threshold, percentile=a.simreg_percentile)
+                simreg_threshold = new_thr
+                target, pair_mask = build_calibrated_pseudo_ranks(calib, reliable)
+                for d in range(3):
+                    m = pair_mask[:, :, d]
+                    if m.sum() == 0:
+                        continue
+                    sp = pair_logits(arc_s, d)
+                    onehot = F.one_hot(target[:, :, d], 2).to(sp.dtype)
+                    ce = -(onehot * F.log_softmax(sp, -1)).sum(-1)
+                    arc_unsup = arc_unsup + (ce * m).sum() / m.sum().clamp_min(1.0)
+                if a.diag_arc:
+                    print(f'  [CPR] thr={thr:.6f} pass={float(reliable.float().mean()):.3f} '
+                          f'valid={float(pair_mask.float().mean()):.4f} '
+                          f'unc={float(unc.mean()):.6f}', flush=True)
+            else:
+                for d in range(3):
+                    tp = pair_logits(arc_t_w, d)
+                    prob = torch.softmax(tp, dim=-1)
+                    conf, pseudo = prob.max(-1)
+                    mask = conf > a.p_cutoff
+                    if mask.sum() == 0:
+                        continue
+                    sp = pair_logits(arc_s, d)
+                    onehot = F.one_hot(pseudo, 2).to(sp.dtype)
+                    ce = -(onehot * F.log_softmax(sp, -1)).sum(-1)
+                    arc_unsup = arc_unsup + (ce * mask).sum() / mask.sum().clamp_min(1.0)
             arc_unsup = arc_unsup / 3.0
             arc_loss = arc_sup + a.arc_ulb_ratio * arc_unsup
         else:
