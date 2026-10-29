@@ -1,0 +1,11 @@
+{
+  "version":"existing-reference-oof-v1",
+  "source":"m1_v3_gpu_seed0_20261028T063714Z_7002/build/audit_inputs.npz and manifest.json",
+  "model":"five existing supervised P1+P2 reference checkpoints, each trained on 320 TRAIN labels, evaluated on its 80 held-out TRAIN labels",
+  "folds":5,
+  "coverage":"per fold, 3D normalized VAD 8th-neighbor radius; threshold 75th percentile of 320 fit leave-one-out radii",
+  "constants":"per fold mean and median of 320 fit labels",
+  "evaluation":"aggregate 400 strictly held-out predictions; region skill and errors only, no pooling with P3B probe model",
+  "no_new_training":true,
+  "no_dev_test":true
+}

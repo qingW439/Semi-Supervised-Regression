@@ -1,0 +1,88 @@
+{
+  "source": "existing 320/80 fivefold supervised reference, separate from P3B 400/100",
+  "counts": {
+    "all": {
+      "n": 400,
+      "model_macro_mae": 0.19156133264303207,
+      "mean_macro_mae": 0.2136984315601488,
+      "median_macro_mae": 0.21478332400321962,
+      "mean_skill": 0.10359036683376832,
+      "median_skill": 0.10811822318123465,
+      "per_dimension": {
+        "V": {
+          "model_mae": 0.20795452415943147,
+          "mean_skill": 0.21712388063932553,
+          "median_skill": 0.20914801233906632
+        },
+        "A": {
+          "model_mae": 0.1903018444776535,
+          "mean_skill": 0.08726693744029546,
+          "median_skill": 0.1038292801420021
+        },
+        "D": {
+          "model_mae": 0.17642762929201125,
+          "mean_skill": -0.056644722085616994,
+          "median_skill": -0.043641771131144536
+        }
+      }
+    },
+    "dense": {
+      "n": 302,
+      "model_macro_mae": 0.15667789727120474,
+      "mean_macro_mae": 0.14980317953764305,
+      "median_macro_mae": 0.1475220633132042,
+      "mean_skill": -0.04589166768542574,
+      "median_skill": -0.06206416689388217,
+      "per_dimension": {
+        "V": {
+          "model_mae": 0.16005989060496653,
+          "mean_skill": 0.02639807688457263,
+          "median_skill": 0.003749183955613855
+        },
+        "A": {
+          "model_mae": 0.1652540039542495,
+          "mean_skill": 0.006625899407185942,
+          "median_skill": -0.013951910465126671
+        },
+        "D": {
+          "model_mae": 0.14471979725439818,
+          "mean_skill": -0.21968369466932192,
+          "median_skill": -0.2169117052652385
+        }
+      }
+    },
+    "sparse": {
+      "n": 98,
+      "model_macro_mae": 0.29905926613580613,
+      "mean_macro_mae": 0.4106001265682787,
+      "median_macro_mae": 0.42205782123163443,
+      "mean_skill": 0.27165325389621975,
+      "median_skill": 0.29142584003513594,
+      "per_dimension": {
+        "V": {
+          "model_mae": 0.3555481908272724,
+          "mean_skill": 0.3844174480578022,
+          "median_skill": 0.3850384231993178
+        },
+        "A": {
+          "model_mae": 0.26749008772324545,
+          "mean_skill": 0.20944677814435764,
+          "median_skill": 0.2661246248344853
+        },
+        "D": {
+          "model_mae": 0.2741395198569006,
+          "mean_skill": 0.13209152175636063,
+          "median_skill": 0.15263607274354352
+        }
+      }
+    }
+  },
+  "fold_sparse_counts": {
+    "0": 24,
+    "1": 23,
+    "2": 18,
+    "3": 13,
+    "4": 20
+  },
+  "no_dev_test_access": true
+}

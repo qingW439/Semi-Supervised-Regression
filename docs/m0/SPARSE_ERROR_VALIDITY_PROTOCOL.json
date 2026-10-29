@@ -1,0 +1,26 @@
+{
+  "version": "train-probe-fixed-v1",
+  "source_commit": "35fcfa0b4032b580ba4c4d118f740a237cf95e1b",
+  "split": "existing P3B seed0 400 TRAIN fit / 100 TRAIN probe",
+  "coverage": "3D normalized VAD 8th-neighbor radius; threshold=75th percentile of 400 fit leave-one-out radii; sparse if probe radius > threshold",
+  "constants": "per-dimension mean and median of 400 fit TRAIN original-scale labels only",
+  "skill": "1 - region MAE_model / region MAE_constant, per dimension and macro",
+  "bootstrap": {
+    "repetitions": 10000,
+    "seed": 20261029,
+    "unit": "probe sample",
+    "stratified_by_region": true,
+    "contrast": "sparse skill minus dense skill",
+    "constants_fixed": true
+  },
+  "extremity": "mean per-dimension absolute distance from 400-fit median; quartile cutoffs from 400 fit only",
+  "verdict": "SUPPORTED only if sparse macro skill is lower than dense with bootstrap upper 95% bound below zero for both constants and an extremity-adjusted excess-error gap persists; NOT_SUPPORTED if both baseline-relative gaps are nonnegative without evidence of sparse disadvantage; otherwise INCONCLUSIVE",
+  "forbidden": [
+    "DEV",
+    "TEST",
+    "new training",
+    "threshold changes",
+    "new SSR modules"
+  ],
+  "adjusted_contrast": "OLS sample macro excess error (model minus constant) on intercept + sparse indicator + mean absolute distance from 400-fit median; stratified sample bootstrap 10000, same seed stream; persistence requires sparse coefficient 95% lower bound > 0 for both constants"
+}
