@@ -206,7 +206,36 @@ lb=1000（RCMT: k=20, α=0.4, s=1.2）：
 
 注：lb=1000 的 control 在 s0 的最优解是 step 0（P1 本身），说明该预算下续训容易过拟合；RCMT 仍能在 32–128 步取得更低误差。
 
-### 5.2 一次性 TEST 结果（固定 DEV 选定的超参，不回调）
+### 5.2 近三年框架基座复现：RankUp-3D（NeurIPS 2024）
+
+为回应“基座太旧”，把 RankUp 官方实现忠实改造成三维版本（`scripts/vad_research/train_rankup3d.py`）：
+
+- **ARC**：每个 V/A/D 一个 2 类排序头，pair logit = `a_i - a_j`，标注对用 `sign(y_i-y_j)` 做 CE；
+- **RDA**：逐维把无标签伪标签的分位数映射到标注边际（官方 `RDAHook` 逻辑）；
+- **weak/strong**：EmoBank 没有回译增广，strong 用 15% token masking；
+- **EMA 教师、p_cutoff=0.95、warmup=0.4** 按论文默认。
+
+lb=500, seed=0 的逐项结果（DEV Macro-MAE）：
+
+| 变体 | MAE | 说明 |
+|---|---|---|
+| RankUp-3D 原版（ARC w=1.0 + RDA） | 0.178264（step 0） | ARC 全权重，训练后退化到 0.202 |
+| ARC w=0.05 + RDA | 0.178011 | 最好的一次 raw |
+| 仅 RDA（无 ARC） | 0.177266 | RDA 本身也救不回来 |
+| ARC w=0.05 + RDA，1000 步 | 0.178264（step 0） | 延长训练无效 |
+| ARC w=0.05 + RDA + VRRC | 0.172111 | 换入推理校准 |
+| **ARC w=0.05 + GCF（CVPR 2026）+ LA-PLC + VRRC** | **0.170953** | 近三年基座下的最佳 |
+| 无 ARC + GCF + LA-PLC + VRRC | 0.170989 | 与上一行基本持平 |
+
+对照：P2 control 0.175543；MT-based RCMT **0.169650**。
+
+结论：
+
+1. **忠实复现的 RankUp-3D 在 EmoBank VAD 上跑不过强监督 P2**（0.1780 vs 0.1755）；ARC 全权重会显著破坏回归（0.202），降到 0.05 仅能止损，延长到 1000 步也无改善。
+2. 换入 GaussianMatch 的多视图高斯过滤 + LA-PLC + VRRC 后，RankUp-3D 从 0.1783 提升到 **0.17095**（-0.0073），超过 P2 0.0046，但仍比 MT-based RCMT 差 0.0013。
+3. 这说明：近三年 SSR 框架的增益不能自动迁移到三维 VAD；真正跨框架有效的是“检索校准 + 方差恢复”这一模块，而不是 ARC/RDA 本身。
+
+### 5.3 一次性 TEST 结果（固定 DEV 选定的超参，不回调）
 
 所有模型只读取一次 `test_gold.parquet`；RCMT 在 TEST 上使用与 DEV 完全相同的校准参数（bank 仅用对应预算的 TRAIN 标注）。
 
