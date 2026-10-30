@@ -30,7 +30,7 @@ from scripts.vad_research.train_roberta_vad_supervised import (  # noqa: E402
     RobertaVADRegressor, load_checked_splits, set_seed, sha256_file, git_commit,
 )
 from scripts.vad_research.jacf import jacf_fuse  # noqa: E402
-from scripts.vad_research.jacf_modes import evidence, build_objective  # noqa: E402
+from scripts.vad_research.jacf_modes import evidence, build_objective, fixed_alpha_objective  # noqa: E402
 
 DATA_ROOT = REPO.parent / 'data' / 'emobank_processed'
 MODEL_DIR = REPO.parent / 'pretrained' / 'roberta-base'
@@ -132,10 +132,17 @@ def cli():
     p.add_argument('--dropout', type=float, default=0.1)
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
-    p.add_argument('--mode', choices=('multi', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'),
-                   default='jacf')
+    p.add_argument('--mode', choices=('multi', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
+    p.add_argument('--rel-mode', default='default',
+                   choices=('default', 'none', 'anchor_var', 'prop_var', 'max_var',
+                            'anchor_var_conf', 'anchor_filter', 'jacf', 'oracle',
+                            'oracle_filter'))
     p.add_argument('--alpha-fixed', type=float, default=0.75)
-    p.add_argument('--alpha-shift', type=float, default=0.5)
+    p.add_argument('--rel-dimnorm', action='store_true')
+    p.add_argument('--filter-q', type=float, default=0.7)
+    p.add_argument('--oracle-labels', type=Path, default=None,
+                   help='npz with ids and hidden normalized VAD; ORACLE DIAGNOSTIC ONLY')
+    p.add_argument('--oracle-eps', type=float, default=0.005)
     p.add_argument('--seq-alpha', type=float, default=0.4)
     p.add_argument('--gcf-tau', type=float, default=0.05)
     p.add_argument('--mc-passes', type=int, default=5)
@@ -182,6 +189,13 @@ def main():
     if out.exists() and any(out.iterdir()):
         raise FileExistsError(out)
     device = torch.device('cpu' if a.device == 'cpu' or not torch.cuda.is_available() else 'cuda')
+    oracle_y = None
+    if a.rel_mode in ('oracle', 'oracle_filter'):
+        if a.oracle_labels is None:
+            raise ValueError('--oracle-labels is required for --rel-mode oracle (diagnostic only)')
+        oz = np.load(a.oracle_labels, allow_pickle=True)
+        oid2y = {str(i): y for i, y in zip(oz['ids'], oz['y'])}
+        oracle_y = torch.tensor(np.stack([oid2y[i] for i in ulb['id']]), dtype=torch.float32, device=device)
     tok = AutoTokenizer.from_pretrained(str(a.pretrain_path.resolve()), local_files_only=True, use_fast=True)
 
     model = RobertaVADRegressor(str(a.pretrain_path.resolve()), dropout=a.dropout, offline=True)
@@ -225,6 +239,7 @@ def main():
 
     lb_iter, ulb_iter = forever(lb_dl), forever(ulb_dl)
     history = []
+    rel = None
     best, best_step = float('inf'), -1
     for step in range(0, a.steps + 1):
         if step == 0 or step % a.eval_every == 0 or step == a.steps:
@@ -246,7 +261,9 @@ def main():
             raw_ccc = float(np.mean([m_raw[d]['ccc'] for d in DIMENSIONS]))
             raw_r2 = float(np.mean([m_raw[d]['r2'] for d in DIMENSIONS]))
             history.append({'step': step, 'macro_mae': mae, 'macro_ccc': ccc, 'macro_r2': r2,
-                            'raw_mae': raw_mae, 'raw_ccc': raw_ccc, 'raw_r2': raw_r2})
+                            'raw_mae': raw_mae, 'raw_ccc': raw_ccc, 'raw_r2': raw_r2,
+                            'rel_mean': [float(rel[:, d].mean()) for d in range(3)] if rel is not None else [1.0, 1.0, 1.0],
+                            'rel_std': [float(rel[:, d].std()) for d in range(3)] if rel is not None else [0.0, 0.0, 0.0]})
             print(f'step={step:03d} dev_MAE={mae:.6f} raw_MAE={raw_mae:.6f} '
                   f'CCC={ccc:.5f} raw_CCC={raw_ccc:.5f}', flush=True)
             if mae < best - 1e-8:
@@ -277,9 +294,26 @@ def main():
         ev = evidence(mc, u_feat[rows], l_feat, l_y,
                       k=a.jacf_k, tau=a.jacf_tau,
                       eps_t=a.jacf_eps_t, eps_a=a.jacf_eps_a)
-        target, rel = build_objective(a.mode, ev, v0=a.jacf_v0,
-                                      alpha=a.seq_alpha, c0=0.3, gcf_tau=a.gcf_tau,
-                                      alpha_fixed=a.alpha_fixed, shift=a.alpha_shift)
+        if a.rel_mode == 'default':
+            target, rel = build_objective(a.mode, ev, v0=a.jacf_v0,
+                                          alpha=a.seq_alpha, c0=0.3, gcf_tau=a.gcf_tau,
+                                          alpha_fixed=a.alpha_fixed)
+        elif a.rel_mode == 'oracle':
+            mu_t, _v_t, mu_a, _v_a, _conf = ev
+            target = ((1.0 - a.alpha_fixed) * mu_t + a.alpha_fixed * mu_a).detach()
+            rel = 1.0 / ((target - oracle_y[rows]).abs() + a.oracle_eps)
+            if a.rel_dimnorm:
+                rel = rel / rel.mean(dim=0, keepdim=True).clamp_min(1e-8)
+        elif a.rel_mode == 'oracle_filter':
+            mu_t, _v_t, mu_a, _v_a, _conf = ev
+            target = ((1.0 - a.alpha_fixed) * mu_t + a.alpha_fixed * mu_a).detach()
+            err = (target - oracle_y[rows]).abs()
+            thr = torch.quantile(err, a.filter_q)
+            rel = (err <= thr).to(target.dtype)
+        else:
+            target, rel = fixed_alpha_objective(ev, alpha=a.alpha_fixed,
+                                                rel_mode=a.rel_mode, v0=a.jacf_v0,
+                                                dimnorm=a.rel_dimnorm, filter_q=a.filter_q)
         pred_s = model(**ulb_tok_s)
         err = (pred_s - target).abs()
         unsup = (rel * err).sum() / rel.sum().clamp_min(1e-6)
