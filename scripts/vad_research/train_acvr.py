@@ -54,6 +54,7 @@ def forever(loader):
 
 @torch.inference_mode()
 def encode(encoder, texts, tokenizer, device, max_length=128, bs=64):
+    encoder.eval()
     out = []
     for i in range(0, len(texts), bs):
         tok = tokenizer(list(texts[i:i + bs]), padding=True, truncation=True,
