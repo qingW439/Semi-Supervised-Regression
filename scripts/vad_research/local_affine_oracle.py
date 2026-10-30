@@ -133,6 +133,8 @@ def main():
     out["pareto"] = pareto
     a.out.write_text(json.dumps(out, indent=2))
     for name, m in out.items():
+        if name == "pareto":
+            continue
         print(f'{name:16s} MAE={m["macro_mae_original_scale"]:.6f} '
               f'CCC={np.mean([m[d]["ccc"] for d in DIMS]):.4f} '
               f'CCC_V/A/D={m["V"]["ccc"]:.3f}/{m["A"]["ccc"]:.3f}/{m["D"]["ccc"]:.3f}')
