@@ -29,7 +29,8 @@ def evidence(mc, u_feat, l_feat, l_y, k=20, tau=0.1, eps_t=1e-4, eps_a=1e-4):
     return mu_t, v_t, mu_a, v_a, conf
 
 
-def build_objective(mode, ev, v0=1e-3, alpha=0.4, c0=0.3, gcf_tau=0.05):
+def build_objective(mode, ev, v0=1e-3, alpha=0.4, c0=0.3, gcf_tau=0.05,
+                    alpha_fixed=0.75, shift=0.5):
     mu_t, v_t, mu_a, v_a, conf = ev
     if mode == 'multi':
         target = mu_t
@@ -37,6 +38,14 @@ def build_objective(mode, ev, v0=1e-3, alpha=0.4, c0=0.3, gcf_tau=0.05):
     elif mode == 'anchor':
         target = mu_a
         rel = v0 / (v0 + v_a)
+    elif mode == 'fixed':
+        a = torch.full_like(mu_t, alpha_fixed)
+        target = (1.0 - a) * mu_t + a * mu_a
+        rel = torch.ones_like(mu_t)
+    elif mode == 'shift':
+        a = (v_t / (v_t + v_a) + shift).clamp(0.0, 1.0)
+        target = (1.0 - a) * mu_t + a * mu_a
+        rel = torch.ones_like(mu_t)
     elif mode == 'seq':
         gate = ((conf - c0) / max(1e-6, 1.0 - c0)).clamp(0.0, 1.0)
         a = (alpha * gate).unsqueeze(-1)

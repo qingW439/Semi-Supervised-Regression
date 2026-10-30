@@ -70,6 +70,23 @@ def test_outputs_detached():
     assert not target.requires_grad and not rel.requires_grad
 
 
+def test_fixed_alpha_mode():
+    ev, _ = _ev()
+    target, rel = build_objective('fixed', ev, alpha_fixed=0.75)
+    mu_t, v_t, mu_a, v_a, conf = ev
+    assert torch.allclose(target, 0.25 * mu_t + 0.75 * mu_a)
+    assert torch.allclose(rel, torch.ones_like(rel))
+
+
+def test_shift_alpha_mode():
+    ev, _ = _ev()
+    target, rel = build_objective('shift', ev, shift=0.5)
+    mu_t, v_t, mu_a, v_a, conf = ev
+    a = (v_t / (v_t + v_a) + 0.5).clamp(0, 1)
+    assert torch.allclose(target, (1 - a) * mu_t + a * mu_a)
+    assert torch.allclose(rel, torch.ones_like(rel))
+
+
 def test_unknown_mode_rejected():
     ev, _ = _ev()
     try:

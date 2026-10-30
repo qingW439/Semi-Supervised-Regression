@@ -132,7 +132,10 @@ def cli():
     p.add_argument('--dropout', type=float, default=0.1)
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
-    p.add_argument('--mode', choices=('multi', 'anchor', 'seq', 'jacf', 'no_rel'), default='jacf')
+    p.add_argument('--mode', choices=('multi', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'),
+                   default='jacf')
+    p.add_argument('--alpha-fixed', type=float, default=0.75)
+    p.add_argument('--alpha-shift', type=float, default=0.5)
     p.add_argument('--seq-alpha', type=float, default=0.4)
     p.add_argument('--gcf-tau', type=float, default=0.05)
     p.add_argument('--mc-passes', type=int, default=5)
@@ -275,7 +278,8 @@ def main():
                       k=a.jacf_k, tau=a.jacf_tau,
                       eps_t=a.jacf_eps_t, eps_a=a.jacf_eps_a)
         target, rel = build_objective(a.mode, ev, v0=a.jacf_v0,
-                                      alpha=a.seq_alpha, c0=0.3, gcf_tau=a.gcf_tau)
+                                      alpha=a.seq_alpha, c0=0.3, gcf_tau=a.gcf_tau,
+                                      alpha_fixed=a.alpha_fixed, shift=a.alpha_shift)
         pred_s = model(**ulb_tok_s)
         err = (pred_s - target).abs()
         unsup = (rel * err).sum() / rel.sum().clamp_min(1e-6)
