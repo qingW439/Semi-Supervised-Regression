@@ -1,0 +1,325 @@
+{
+  "protocol": {
+    "data_root": "/root/autodl-tmp/rankup_project/data/emobank_processed",
+    "repo": ".",
+    "note": "TEST labels are only counted/overlap-checked; never used in training or calibration."
+  },
+  "ids": {
+    "counts": {
+      "lb": 500,
+      "ulb": 7562,
+      "dev": 1000,
+      "test": 1000
+    },
+    "overlaps": {
+      "lb&ulb": 0,
+      "lb&dev": 0,
+      "ulb&dev": 0,
+      "lb&test": 0,
+      "ulb&test": 0,
+      "dev&test": 0
+    },
+    "train_union": 8062,
+    "all_union": 10062,
+    "train_union_equals_8062": true,
+    "no_overlap": true
+  },
+  "ulb_columns_ok": true,
+  "ulb_columns": [
+    "id",
+    "text"
+  ],
+  "labels": {
+    "lb": {
+      "finite": true,
+      "in_1_5": true,
+      "normalized_consistent": true,
+      "mean": {
+        "V": 2.98196,
+        "A": 3.05896,
+        "D": 3.0624399999999996
+      },
+      "std": {
+        "V": 0.3682974945461589,
+        "A": 0.2593875135088979,
+        "D": 0.215738574819921
+      }
+    },
+    "dev": {
+      "finite": true,
+      "in_1_5": true,
+      "normalized_consistent": true,
+      "mean": {
+        "V": 2.96196,
+        "A": 3.03125,
+        "D": 3.0614400000000006
+      },
+      "std": {
+        "V": 0.33992397195065066,
+        "A": 0.2510565013435559,
+        "D": 0.2019076350539848
+      }
+    },
+    "test": {
+      "finite": true,
+      "in_1_5": true,
+      "normalized_consistent": true,
+      "mean": {
+        "V": 2.9780900000000003,
+        "A": 3.0339400000000003,
+        "D": 3.0645299999999995
+      },
+      "std": {
+        "V": 0.34534318266590097,
+        "A": 0.2459417893806658,
+        "D": 0.21038593427637065
+      }
+    }
+  },
+  "data_sha256": {
+    "lb": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+    "ulb": "2d85de9048c5f2de6f4b15220d81e2d77169fd265e4aa64eb336c2ddf2740bf0",
+    "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c",
+    "test": "c86aa6be37892962e98158429e31d4bc213d1f622e3f374418e1c0b817931f97"
+  },
+  "pip_freeze_sha256": "fd5a63603d09491bb7f10ecc44d9b38f9a076958591ee8bb7f7345ab009797e3",
+  "code_scan": {
+    "scripts/vad_research/train_acvr.py": {
+      "exists": true,
+      "reads_raw_csv": false,
+      "reads_oracle_labels": true,
+      "uses_dev_mean": true,
+      "uses_model_encoder": true,
+      "category": "training"
+    },
+    "scripts/vad_research/train_roberta_vad_supervised.py": {
+      "exists": true,
+      "reads_raw_csv": false,
+      "reads_oracle_labels": false,
+      "uses_dev_mean": false,
+      "uses_model_encoder": false,
+      "category": "training"
+    },
+    "scripts/vad_research/reliability_ceiling.py": {
+      "exists": true,
+      "reads_raw_csv": true,
+      "reads_oracle_labels": false,
+      "uses_dev_mean": false,
+      "uses_model_encoder": true,
+      "category": "diagnostic"
+    },
+    "scripts/vad_research/structure_diagnostic.py": {
+      "exists": true,
+      "reads_raw_csv": true,
+      "reads_oracle_labels": false,
+      "uses_dev_mean": false,
+      "uses_model_encoder": true,
+      "category": "diagnostic"
+    },
+    "scripts/vad_research/local_affine_oracle.py": {
+      "exists": true,
+      "reads_raw_csv": false,
+      "reads_oracle_labels": false,
+      "uses_dev_mean": false,
+      "uses_model_encoder": true,
+      "category": "diagnostic"
+    }
+  },
+  "checkpoints": {
+    "p1_s0": {
+      "path": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s0",
+      "exists": true,
+      "run_config.json": {
+        "data_root": "/hy-tmp/rankup_project/data/emobank_processed",
+        "budget": 500,
+        "seed": 0,
+        "model": "/hy-tmp/rankup_project/pretrained/roberta-base",
+        "max_length": 128,
+        "batch_size": 16,
+        "eval_batch_size": 32,
+        "epochs": 20,
+        "patience": 5,
+        "min_delta": 0.0001,
+        "lr": 2e-05,
+        "weight_decay": 0.01,
+        "dropout": 0.1,
+        "clip_grad_norm": 1.0,
+        "num_workers": 0,
+        "device": "cuda",
+        "offline": true,
+        "check_only": false,
+        "out": "/hy-tmp/rankup_project/Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s0",
+        "git_commit": "23d54714c707ccd408f377e0ae68d54afda4ff9b",
+        "torch": "2.4.1+cu121",
+        "transformers": "4.46.3",
+        "split_sha256": {
+          "lb": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+          "ulb": "2d85de9048c5f2de6f4b15220d81e2d77169fd265e4aa64eb336c2ddf2740bf0",
+          "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c"
+        }
+      },
+      "dev_metrics_best.json": {
+        "epoch": 10,
+        "metrics": {
+          "V": {
+            "mae": 0.18427734792232514,
+            "rmse": 0.2501448490056305,
+            "pearson": 0.6986319437138154,
+            "srcc": 0.6827007482518522,
+            "ccc": 0.6592412547243064,
+            "r2": 0.45793163284314486
+          },
+          "A": {
+            "mae": 0.18945910489559173,
+            "rmse": 0.24014861131343126,
+            "pearson": 0.4458181379073742,
+            "srcc": 0.3936689014946239,
+            "ccc": 0.392315935891417,
+            "r2": 0.08409225376216978
+          },
+          "D": {
+            "mae": 0.16105662226676942,
+            "rmse": 0.20792375848990893,
+            "pearson": 0.2770641178470271,
+            "srcc": 0.25874020483370536,
+            "ccc": 0.2467817770916125,
+            "r2": -0.06154219088948398
+          },
+          "macro_mae_original_scale": 0.1782643583615621,
+          "out_of_range_count": 0
+        },
+        "stats": {
+          "V": {
+            "gold_mean": 2.961959958076477,
+            "pred_mean": 3.018261432647705,
+            "gold_std": 0.3397539556026459,
+            "pred_std": 0.25499844551086426
+          },
+          "A": {
+            "gold_mean": 3.03125,
+            "pred_mean": 3.0964057445526123,
+            "gold_std": 0.25093093514442444,
+            "pred_std": 0.16640880703926086
+          },
+          "D": {
+            "gold_mean": 3.0614399909973145,
+            "pred_mean": 3.03640079498291,
+            "gold_std": 0.2018066644668579,
+            "pred_std": 0.1266644448041916
+          }
+        }
+      },
+      "has_best_ckpt": true,
+      "selection_is_dev": true
+    },
+    "alpha_fixed075_s0": {
+      "path": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-source/saved_models/vad_research/alpha_fixed075_s0",
+      "exists": true,
+      "run_config.json": {
+        "budget": 500,
+        "seed": 0,
+        "data_root": "/root/autodl-tmp/rankup_project/data/emobank_processed",
+        "pretrain_path": "/root/autodl-tmp/rankup_project/pretrained/roberta-base",
+        "p1_dir": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s0",
+        "out": "saved_models/vad_research/alpha_fixed075_s0",
+        "steps": 160,
+        "batch_size": 16,
+        "ulb_batch_size": 64,
+        "eval_batch_size": 32,
+        "eval_every": 32,
+        "lr": 5e-06,
+        "weight_decay": 0.01,
+        "clip_grad_norm": 1.0,
+        "dropout": 0.1,
+        "ema_decay": 0.99,
+        "lambda_u": 1.0,
+        "mode": "fixed",
+        "alpha_fixed": 0.75,
+        "alpha_shift": 0.5,
+        "seq_alpha": 0.4,
+        "gcf_tau": 0.05,
+        "mc_passes": 5,
+        "jacf_k": 20,
+        "jacf_tau": 0.1,
+        "jacf_eps_t": 0.0001,
+        "jacf_eps_a": 0.0001,
+        "jacf_v0": 0.001,
+        "eval_knn_alpha": 0.4,
+        "eval_knn_k": 20,
+        "eval_scale": 1.2,
+        "mask_prob": 0.15,
+        "save_ckpt": true,
+        "device": "cuda",
+        "git_commit": "658fc6af3a8e802bda9b5abeadacc6d07ec13513",
+        "p1_sha256": "ded8403b94c616e4d187e11cbb34b25026d589b9a296468fdbb04645c99d0cb1"
+      },
+      "dev_metrics_best.json": {
+        "step": 96,
+        "metrics": {
+          "V": {
+            "mae": 0.17453242707252503,
+            "rmse": 0.24067833276610376,
+            "pearson": 0.7096956709273954,
+            "srcc": 0.6877836512911526,
+            "ccc": 0.6793117430702017,
+            "r2": 0.49818351443832454
+          },
+          "A": {
+            "mae": 0.1775972932577133,
+            "rmse": 0.22695479362897827,
+            "pearson": 0.45904761599756083,
+            "srcc": 0.4069583702651618,
+            "ccc": 0.40203564193171304,
+            "r2": 0.18196799959275833
+          },
+          "D": {
+            "mae": 0.15054750061035158,
+            "rmse": 0.19713227555328158,
+            "pearson": 0.31213718714662725,
+            "srcc": 0.2829764828945622,
+            "ccc": 0.258379252059614,
+            "r2": 0.04578883003809764
+          },
+          "macro_mae_original_scale": 0.16755907364686332,
+          "out_of_range_count": 0
+        },
+        "raw_metrics": {
+          "V": {
+            "mae": 0.17684381580352784,
+            "rmse": 0.24312253146645826,
+            "pearson": 0.7002292441326718,
+            "srcc": 0.6829631596778494,
+            "ccc": 0.662588706026001,
+            "r2": 0.48793940794702506
+          },
+          "A": {
+            "mae": 0.18211468362808228,
+            "rmse": 0.23230467048724315,
+            "pearson": 0.4488382281141069,
+            "srcc": 0.3934130977106417,
+            "ccc": 0.38740926614425725,
+            "r2": 0.14294744180531893
+          },
+          "D": {
+            "mae": 0.1532169222831726,
+            "rmse": 0.19889466999408742,
+            "pearson": 0.31518209074644565,
+            "srcc": 0.2818981582551226,
+            "ccc": 0.2708488377864164,
+            "r2": 0.0286509587707805
+          },
+          "macro_mae_original_scale": 0.17072514057159424,
+          "out_of_range_count": 0
+        }
+      },
+      "has_best_ckpt": true,
+      "selection_is_dev": true
+    }
+  },
+  "flags": {
+    "dev_selected_checkpoints": true,
+    "old_vrrc_batch_mean": true,
+    "per_fold_encoder_geometry": true,
+    "test_used_historically": true
+  }
+}
