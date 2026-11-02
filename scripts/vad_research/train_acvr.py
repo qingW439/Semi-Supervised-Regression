@@ -157,6 +157,8 @@ def cli():
     p.add_argument('--mask-prob', type=float, default=0.15)
     p.add_argument('--save-ckpt', action='store_true', default=True)
     p.add_argument('--no-save-ckpt', dest='save_ckpt', action='store_false')
+    p.add_argument('--save-at-step', type=int, default=0,
+                   help='optionally save an extra checkpoint at this exact step')
     p.add_argument('--device', choices=('auto', 'cuda', 'cpu'), default='auto')
     a = p.parse_args()
     if a.p1_dir is None:
@@ -273,6 +275,13 @@ def main():
                                 'dev_metrics': m, 'raw_metrics': m_raw},
                                out / 'model_best.pth')
                 (out / 'dev_metrics_best.json').write_text(
+                    json.dumps({'step': step, 'metrics': m, 'raw_metrics': m_raw},
+                               indent=2) + '\n', encoding='utf-8')
+            if a.save_at_step and step == a.save_at_step:
+                torch.save({'model': model.state_dict(), 'step': step,
+                            'dev_metrics': m, 'raw_metrics': m_raw},
+                           out / f'model_step{step}.pth')
+                (out / f'dev_metrics_step{step}.json').write_text(
                     json.dumps({'step': step, 'metrics': m, 'raw_metrics': m_raw},
                                indent=2) + '\n', encoding='utf-8')
         if step == a.steps:
