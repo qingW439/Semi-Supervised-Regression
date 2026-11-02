@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 
@@ -18,7 +19,7 @@ import torch
 import torch.nn.functional as F
 from scipy.stats import spearmanr
 from torch.utils.data import DataLoader
-from transformers import AutoTokenizer
+from transformers import AutoModel, AutoTokenizer
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -65,32 +66,43 @@ def main():
     ap.add_argument("--data-root", type=Path, required=True)
     ap.add_argument("--pretrain-path", type=Path, required=True)
     ap.add_argument("--manifest", type=Path, required=True)
-    ap.add_argument("--features", type=Path, required=True)
-    ap.add_argument("--oof", type=Path, required=True)
+    ap.add_argument("--features", type=Path, default=None)
+    ap.add_argument("--data-seed", type=int, default=0)
+    ap.add_argument("--oof", type=Path, default=None)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--device", default="cuda")
     a = ap.parse_args()
     device = torch.device(a.device if torch.cuda.is_available() else "cpu")
-    lb = read_gold(a.data_root / "lb500_s0" / "train_lb.parquet", expected_n=500)
-    y = lb.loc[:, [f"{d}_norm" for d in DIMS]].to_numpy(np.float64)
-    feat = np.load(a.features)["lb"]
-    feat = feat / np.maximum(np.linalg.norm(feat, axis=1, keepdims=True), 1e-12)
+    random.seed(1000 * a.data_seed)
+    np.random.seed(1000 * a.data_seed)
+    torch.manual_seed(1000 * a.data_seed)
     tok = AutoTokenizer.from_pretrained(str(a.pretrain_path), local_files_only=True, use_fast=True)
+    lb = read_gold(a.data_root / f"lb500_s{a.data_seed}" / "train_lb.parquet", expected_n=500)
+    y = lb.loc[:, [f"{d}_norm" for d in DIMS]].to_numpy(np.float64)
+    if a.features is not None and Path(a.features).is_file():
+        feat = np.load(a.features)["lb"]
+    else:
+        from scripts.vad_research.train_acvr import encode
+        enc = AutoModel.from_pretrained(str(a.pretrain_path), local_files_only=True).to(device).eval()
+        feat = encode(enc, lb["text"].tolist(), tok, device).numpy()
+        del enc; torch.cuda.empty_cache()
+    feat = feat / np.maximum(np.linalg.norm(feat, axis=1, keepdims=True), 1e-12)
     man = json.loads(a.manifest.read_text())
     id2pos = {i: k for k, i in enumerate(lb["id"])}
-    oof = pd.read_parquet(a.oof).set_index("id")
+    oof = pd.read_parquet(a.oof).set_index("id") if a.oof is not None else None
     m0_mc = np.zeros((10, 500, 3), np.float32)
     jacf = np.zeros((500, 3), np.float32)
     for f in range(5):
         hold = man["fold_ids"][str(f)]
         train = lb[~lb["id"].isin(hold)].reset_index(drop=True)
         hold_df = lb[lb["id"].isin(hold)].reset_index(drop=True)
-        model = train_teacher(train, tok, a.pretrain_path, device, 10, seed=100 + f)
+        model = train_teacher(train, tok, a.pretrain_path, device, 10, seed=1000 * a.data_seed + 100 + f)
         mc = predict_mc(model, hold_df["text"].tolist(), tok, device, 10).numpy()
         for k, idx in enumerate(hold_df["id"]):
             pos = id2pos[idx]
             m0_mc[:, pos] = mc[:, k]
-            jacf[pos] = oof.loc[idx, ["raw_V", "raw_A", "raw_D"]].to_numpy()
+            if oof is not None:
+                jacf[pos] = oof.loc[idx, ["raw_V", "raw_A", "raw_D"]].to_numpy()
         del model; torch.cuda.empty_cache()
         print("fold", f, "done", flush=True)
     np.savez(a.out.with_suffix(".npz"), m0_mc=m0_mc, m0_mean=m0_mc.mean(0), jacf=jacf, y=y)
