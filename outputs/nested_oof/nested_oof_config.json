@@ -1,0 +1,62 @@
+{
+  "config": {
+    "data_root": "/root/autodl-tmp/rankup_project/data/emobank_processed",
+    "pretrain_path": "/root/autodl-tmp/rankup_project/pretrained/roberta-base",
+    "manifest": "outputs/p0/fold_manifest.json",
+    "out_dir": "outputs/nested_oof",
+    "folds": "0,1,2,3,4",
+    "inner_folds": 5,
+    "epochs": 10,
+    "k": 20,
+    "tau": 0.1,
+    "alpha": 0.75,
+    "device": "cuda"
+  },
+  "n": 500,
+  "equivalence_max_abs_T2_T3fix": 0.0,
+  "alphas_per_outer_fold": {
+    "0": [
+      0.75,
+      0.25,
+      0.75,
+      0.25,
+      0.5
+    ],
+    "1": [
+      1.0,
+      0.75,
+      0.75,
+      1.0,
+      0.75
+    ],
+    "2": [
+      0.75,
+      0.5,
+      0.75,
+      0.75,
+      0.25
+    ],
+    "3": [
+      0.25,
+      0.75,
+      0.75,
+      0.75,
+      0.75
+    ],
+    "4": [
+      0.75,
+      1.0,
+      1.0,
+      0.75,
+      0.5
+    ]
+  },
+  "methods": [
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5"
+  ]
+}
