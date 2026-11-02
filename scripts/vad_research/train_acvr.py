@@ -123,6 +123,12 @@ def diff_huber(s, p0, sigma0, delta=1.0):
     return torch.nn.functional.huber_loss(z, torch.zeros_like(z), delta=delta)
 
 
+def center_huber(s, p0, sigma0, delta=1.0):
+    """Mean-invariant reference distillation (centered M0)."""
+    z = ((s - s.mean(0, keepdim=True)) - (p0 - p0.mean(0, keepdim=True))) / sigma0
+    return torch.nn.functional.huber_loss(z, torch.zeros_like(z), delta=delta)
+
+
 def knn_calibrate(pred, query_feat, l_feat, l_y, k, temp, alpha, c0):
     sim = query_feat @ l_feat.T
     kk = min(k, l_feat.shape[0])
@@ -160,6 +166,7 @@ def cli():
     p.add_argument('--m0-ckpt', type=Path, default=None,
                    help='frozen matched supervised M0 checkpoint for diff distillation')
     p.add_argument('--diff-weight', type=float, default=0.0)
+    p.add_argument('--diff-mode', choices=('pairs', 'center'), default='pairs')
     p.add_argument('--diff-shuffle', action='store_true',
                    help='negative control: shuffle M0 predictions within batch')
     p.add_argument('--mode', choices=('multi', 'teacher', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
@@ -408,7 +415,10 @@ def main():
             p0 = m0_pred[rows]
             if a.diff_shuffle:
                 p0 = p0[torch.randperm(len(p0), device=device)]
-            total = total + a.diff_weight * diff_huber(pred_s, p0, m0_sigma)
+            if a.diff_mode == 'center':
+                total = total + a.diff_weight * center_huber(pred_s, p0, m0_sigma)
+            else:
+                total = total + a.diff_weight * diff_huber(pred_s, p0, m0_sigma)
         if not torch.isfinite(total):
             raise RuntimeError('Nonfinite loss')
         total.backward()
