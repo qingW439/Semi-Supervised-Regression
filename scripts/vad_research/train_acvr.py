@@ -132,7 +132,7 @@ def cli():
     p.add_argument('--dropout', type=float, default=0.1)
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
-    p.add_argument('--mode', choices=('multi', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
+    p.add_argument('--mode', choices=('multi', 'teacher', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
     p.add_argument('--rel-mode', default='default',
                    choices=('default', 'none', 'anchor_var', 'prop_var', 'max_var',
                             'anchor_var_conf', 'anchor_filter', 'jacf', 'oracle',

@@ -35,6 +35,9 @@ def build_objective(mode, ev, v0=1e-3, alpha=0.4, c0=0.3, gcf_tau=0.05,
     if mode == 'multi':
         target = mu_t
         rel = v0 / (v0 + v_t)
+    elif mode == 'teacher':
+        target = mu_t
+        rel = torch.ones_like(v_t)
     elif mode == 'anchor':
         target = mu_a
         rel = v0 / (v0 + v_a)
