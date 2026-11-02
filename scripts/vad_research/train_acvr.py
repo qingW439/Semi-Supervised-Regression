@@ -132,6 +132,7 @@ def cli():
     p.add_argument('--dropout', type=float, default=0.1)
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
+    p.add_argument('--gamma-dims', default="", help="comma-separated per-dim gamma for a + gamma*(t-a); overrides mode")
     p.add_argument('--rda-weight', type=float, default=0.0,
                    help='relational distribution alignment weight (0 disables)')
     p.add_argument('--mode', choices=('multi', 'teacher', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
@@ -334,7 +335,12 @@ def main():
         ev = evidence(mc, u_feat[rows], l_feat, l_y,
                       k=a.jacf_k, tau=a.jacf_tau,
                       eps_t=a.jacf_eps_t, eps_a=a.jacf_eps_a)
-        if a.rel_mode == 'default':
+        if a.gamma_dims:
+            mu_t, _vt, mu_a, _va, _cf = ev
+            g = torch.tensor([float(x) for x in a.gamma_dims.split(",")], device=device)
+            target = (mu_a + g * (mu_t - mu_a)).detach()
+            rel = torch.ones_like(target)
+        elif a.rel_mode == 'default':
             target, rel = build_objective(a.mode, ev, v0=a.jacf_v0,
                                           alpha=a.seq_alpha, c0=0.3, gcf_tau=a.gcf_tau,
                                           alpha_fixed=a.alpha_fixed)
