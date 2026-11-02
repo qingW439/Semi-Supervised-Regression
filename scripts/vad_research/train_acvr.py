@@ -101,6 +101,28 @@ def predict(model, loader, device):
     return np.concatenate(ys), np.concatenate(ps), ids
 
 
+@torch.inference_mode()
+def predict_texts(model, texts, tok, device, bs=64):
+    model.eval()
+    out = []
+    for i in range(0, len(texts), bs):
+        b = tok(list(texts[i:i + bs]), padding=True, truncation=True,
+                max_length=128, return_tensors='pt')
+        b = {k: v.to(device) for k, v in b.items()}
+        out.append(model(**b).float().cpu())
+    return torch.cat(out)
+
+
+def diff_huber(s, p0, sigma0, delta=1.0):
+    """Pairwise continuous-difference distillation (M0 reference)."""
+    B = s.shape[0]
+    iu = torch.triu_indices(B, B, offset=1, device=s.device)
+    ds = s[:, None, :] - s[None, :, :]
+    d0 = p0[:, None, :] - p0[None, :, :]
+    z = (ds[iu[0], iu[1]] - d0[iu[0], iu[1]]) / sigma0
+    return torch.nn.functional.huber_loss(z, torch.zeros_like(z), delta=delta)
+
+
 def knn_calibrate(pred, query_feat, l_feat, l_y, k, temp, alpha, c0):
     sim = query_feat @ l_feat.T
     kk = min(k, l_feat.shape[0])
@@ -135,6 +157,11 @@ def cli():
     p.add_argument('--gamma-dims', default="", help="comma-separated per-dim gamma for a + gamma*(t-a); overrides mode")
     p.add_argument('--rda-weight', type=float, default=0.0,
                    help='relational distribution alignment weight (0 disables)')
+    p.add_argument('--m0-ckpt', type=Path, default=None,
+                   help='frozen matched supervised M0 checkpoint for diff distillation')
+    p.add_argument('--diff-weight', type=float, default=0.0)
+    p.add_argument('--diff-shuffle', action='store_true',
+                   help='negative control: shuffle M0 predictions within batch')
     p.add_argument('--mode', choices=('multi', 'teacher', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
     p.add_argument('--rel-mode', default='default',
                    choices=('default', 'none', 'anchor_var', 'prop_var', 'max_var',
@@ -261,6 +288,17 @@ def main():
             rda_q = torch.stack(dcols, dim=1)  # [n_q,4] (V,A,D,3D)
     u_feat = encode(model.encoder, ulb['text'].tolist(), tok, device).to(device)
     id2row = {k: i for i, k in enumerate(ulb['id'].tolist())}
+    m0_pred, m0_sigma = None, None
+    if a.diff_weight > 0:
+        if a.m0_ckpt is None:
+            raise ValueError('--m0-ckpt is required when --diff-weight > 0')
+        m0 = RobertaVADRegressor(str(a.pretrain_path), dropout=0.1, offline=True).to(device)
+        md = torch.load(a.m0_ckpt, map_location='cpu', weights_only=False)
+        m0.load_state_dict(md['model'], strict=True); del md
+        m0_pred = predict_texts(m0, ulb['text'].tolist(), tok, device).to(device)
+        m0_sigma = m0_pred.std(0).clamp_min(1e-6)
+        del m0
+        torch.cuda.empty_cache()
     dev_feat = None
     if a.eval_knn_alpha > 0:
         dev_feat = encode(model.encoder, dev['text'].tolist(), tok, device).to(device)
@@ -366,6 +404,11 @@ def main():
         total = loss + a.lambda_u * unsup
         if rda_q is not None:
             total = total + a.rda_weight * rda_loss(pred_s, rda_q, rda_qs)
+        if m0_pred is not None:
+            p0 = m0_pred[rows]
+            if a.diff_shuffle:
+                p0 = p0[torch.randperm(len(p0), device=device)]
+            total = total + a.diff_weight * diff_huber(pred_s, p0, m0_sigma)
         if not torch.isfinite(total):
             raise RuntimeError('Nonfinite loss')
         total.backward()
