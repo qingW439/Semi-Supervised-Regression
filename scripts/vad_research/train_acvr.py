@@ -132,6 +132,8 @@ def cli():
     p.add_argument('--dropout', type=float, default=0.1)
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
+    p.add_argument('--rda-weight', type=float, default=0.0,
+                   help='relational distribution alignment weight (0 disables)')
     p.add_argument('--mode', choices=('multi', 'teacher', 'anchor', 'seq', 'jacf', 'no_rel', 'fixed', 'shift'), default='jacf')
     p.add_argument('--rel-mode', default='default',
                    choices=('default', 'none', 'anchor_var', 'prop_var', 'max_var',
@@ -166,6 +168,21 @@ def cli():
     if a.out is None:
         a.out = REPO / 'saved_models' / 'vad_research' / f'acvr_lb{a.budget}_s{a.seed}'
     return a
+
+
+def rda_loss(pred, q_target, qs):
+    """Match quantiles of within-batch pairwise VAD distances to anchor distances."""
+    B = pred.shape[0]
+    iu = torch.triu_indices(B, B, offset=1, device=pred.device)
+    cols = []
+    for d in range(3):
+        diff = (pred[:, d][:, None] - pred[:, d][None, :]).abs()
+        cols.append(torch.quantile(diff[iu[0], iu[1]], qs))
+    d3 = torch.cdist(pred, pred)
+    cols.append(torch.quantile(d3[iu[0], iu[1]], qs))
+    q = torch.stack(cols, dim=1)
+    return F.mse_loss(q, q_target)
+
 
 
 def mask_tokens(tokens, tokenizer, prob):
@@ -227,6 +244,20 @@ def main():
 
     l_feat = encode(model.encoder, lb['text'].tolist(), tok, device).to(device)
     l_y = torch.tensor(lb.loc[:, list(NORM_COLUMNS)].to_numpy(dtype=np.float32), device=device)
+    rda_q = None
+    rda_qs = None
+    if a.rda_weight > 0:
+        rda_qs = torch.tensor([0.1, 0.25, 0.5, 0.75, 0.9], device=device)
+        with torch.no_grad():
+            dcols = []
+            for d in range(3):
+                diff = (l_y[:, d][:, None] - l_y[:, d][None, :]).abs()
+                iu = torch.triu_indices(len(l_y), len(l_y), offset=1)
+                dcols.append(torch.quantile(diff[iu[0], iu[1]], rda_qs))
+            d3 = torch.cdist(l_y, l_y)
+            iu = torch.triu_indices(len(l_y), len(l_y), offset=1)
+            dcols.append(torch.quantile(d3[iu[0], iu[1]], rda_qs))
+            rda_q = torch.stack(dcols, dim=1)  # [n_q,4] (V,A,D,3D)
     u_feat = encode(model.encoder, ulb['text'].tolist(), tok, device).to(device)
     id2row = {k: i for i, k in enumerate(ulb['id'].tolist())}
     dev_feat = None
@@ -327,6 +358,8 @@ def main():
         err = (pred_s - target).abs()
         unsup = (rel * err).sum() / rel.sum().clamp_min(1e-6)
         total = loss + a.lambda_u * unsup
+        if rda_q is not None:
+            total = total + a.rda_weight * rda_loss(pred_s, rda_q, rda_qs)
         if not torch.isfinite(total):
             raise RuntimeError('Nonfinite loss')
         total.backward()
