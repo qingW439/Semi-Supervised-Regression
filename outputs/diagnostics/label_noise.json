@@ -1,0 +1,93 @@
+{
+  "protocol": {
+    "note": "individual ratings used only for TRAIN-500 and DEV diagnostics; no ulb hidden labels",
+    "gold_aggregation": "weighted mean of all reader+writer individual ratings",
+    "max_abs_gold_recompute_diff": 0.006363636363636349,
+    "aggregation_verified": true,
+    "all_one_rows_filtered": 9939,
+    "n_train": 500
+  },
+  "dims": {
+    "V": {
+      "n_mean": 9.262,
+      "n_min": 5,
+      "n_max": 12,
+      "within_sd_mean": 0.40457996445127264,
+      "within_sd_median": 0.4216370213557839,
+      "within_range_mean": 1.092,
+      "icc": {
+        "icc_1_1": 0.33062460936963095,
+        "icc_1_k": 0.8206154639259481,
+        "msb": 1.254679195891308,
+        "msw": 0.22507004547672663,
+        "n0": 9.261669095046063
+      },
+      "split_half": {
+        "mean_split_half_r": 0.6811968379506075,
+        "spearman_brown_full": 0.8103713052196695,
+        "n_items": 500,
+        "reps": 200
+      },
+      "spearman_sd_vs_oof_error": 0.4297034604698359,
+      "high_intensity_sd": 0.6288039689841687,
+      "low_intensity_sd": 0.10193804264850549,
+      "estimated_noise_sd_of_mean": 0.15798817215503902,
+      "model_oof_residual_sd": 0.18822312355041504,
+      "noise_share_of_residual_var": 0.7045360118118466
+    },
+    "A": {
+      "n_mean": 9.262,
+      "n_min": 5,
+      "n_max": 12,
+      "within_sd_mean": 0.5162477518958938,
+      "within_sd_median": 0.5104613793019176,
+      "within_range_mean": 1.554,
+      "icc": {
+        "icc_1_1": 0.09265012135332688,
+        "icc_1_k": 0.4860502244527797,
+        "msb": 0.6179176502260927,
+        "msw": 0.31757863764036615,
+        "n0": 9.261669095046063
+      },
+      "split_half": {
+        "mean_split_half_r": 0.3156340967247538,
+        "spearman_brown_full": 0.47982048733841565,
+        "n_items": 500,
+        "reps": 200
+      },
+      "spearman_sd_vs_oof_error": 0.34846835401414067,
+      "high_intensity_sd": 0.6609789589424787,
+      "low_intensity_sd": 0.39726167122277917,
+      "estimated_noise_sd_of_mean": 0.1853647306831188,
+      "model_oof_residual_sd": 0.15166187286376953,
+      "noise_share_of_residual_var": 1.4938306968083692
+    },
+    "D": {
+      "n_mean": 9.262,
+      "n_min": 5,
+      "n_max": 12,
+      "within_sd_mean": 0.4197393518077423,
+      "within_sd_median": 0.4216370213557839,
+      "within_range_mean": 1.218,
+      "icc": {
+        "icc_1_1": 0.07931383043214535,
+        "icc_1_k": 0.4437830921394892,
+        "msb": 0.42261805970648936,
+        "msw": 0.23506731037595224,
+        "n0": 9.261669095046063
+      },
+      "split_half": {
+        "mean_split_half_r": 0.27870048951314774,
+        "spearman_brown_full": 0.435912071354974,
+        "n_items": 500,
+        "reps": 200
+      },
+      "spearman_sd_vs_oof_error": 0.26500734041856616,
+      "high_intensity_sd": 0.621519351357411,
+      "low_intensity_sd": 0.20901512614022116,
+      "estimated_noise_sd_of_mean": 0.16104703506643886,
+      "model_oof_residual_sd": 0.13579215109348297,
+      "noise_share_of_residual_var": 1.406553096953597
+    }
+  }
+}

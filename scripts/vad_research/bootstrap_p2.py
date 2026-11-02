@@ -38,10 +38,11 @@ def main():
     methods = ["vrr", "global", "li", "la"]
     rng = np.random.default_rng(20261102)
     n = len(y)
+    scale = 4.0  # normalized [0,1] -> original EmoBank [1,5]
     out = {}
     for m in methods:
         p = d[[f"{m}_{k}" for k in DIMS]].to_numpy()
-        d_mae = np.abs(y - p).mean(1) - np.abs(y - d[[f"vrr_{k}" for k in DIMS]].to_numpy()).mean(1)
+        d_mae = (np.abs(y - p).mean(1) - np.abs(y - d[[f"vrr_{k}" for k in DIMS]].to_numpy()).mean(1)) * scale
         mae_vals = []
         ccc_vals = []
         for _ in range(a.boot):
@@ -54,8 +55,12 @@ def main():
             "delta_ccc_vs_vrr": float(macro_ccc(y, p) - macro_ccc(y, d[[f"vrr_{k}" for k in DIMS]].to_numpy())),
             "delta_ccc_ci95": [float(np.percentile(ccc_vals, 2.5)), float(np.percentile(ccc_vals, 97.5))],
         }
+    out["mae_scale"] = "original_[1,5]"
+    out["note"] = "MAE deltas are on the original [1,5] scale; CCC is scale-invariant."
     a.out.write_text(json.dumps(out, indent=2) + "\n")
     for k, v in out.items():
+        if not isinstance(v, dict) or "delta_mae_vs_vrr" not in v:
+            continue
         print(f'{k:8s} dMAE={v["delta_mae_vs_vrr"]:+.6f} CI={v["delta_mae_ci95"]} '
               f'dCCC={v["delta_ccc_vs_vrr"]:+.4f} CI={v["delta_ccc_ci95"]}')
 
