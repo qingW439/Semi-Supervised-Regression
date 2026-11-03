@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-29",
+  "status": "INCONCLUSIVE",
+  "stop_gate": "P3B held-out labels cannot be independently certified as excluded from checkpoint training and selection because the run did not capture its executed source hash",
+  "worktree": {
+    "path": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-m1-utility-audit",
+    "head": "e45575d642b301e0410642054cef6ee0999bdc7d",
+    "dimensional_utility_sha256": "374747c5b0d2242a2ba3c4a16904de6555edd05c0f8402f62be7b6fe24258e66"
+  },
+  "p3b": {
+    "source_train_lb_sha256": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+    "train_count": 400,
+    "probe_count": 100,
+    "train_id_sha256": "2267918146a9632bd90c3d07b5215badb70dde1799a039ae190ca0f4aa000c6e",
+    "probe_id_sha256": "54d7fcfc5964d5a4e15bfa31d7c13ff2b0cff7428924ea826ec066ee2cdb18cb",
+    "saved_ids_match_regenerated_split": true,
+    "train_probe_id_overlap": 0,
+    "checkpoint_sha256": "f37a7aa1352e72e423a7f0dc1fae7dfdbfea0a15e7e2e29e49f3361aacb7e9fa",
+    "checkpoint_train_steps": 320,
+    "checkpoint_contains_optimizer_state": false,
+    "run_reported_git_commit": "23d54714c707ccd408f377e0ae68d54afda4ff9b",
+    "run_reported_commit_contains_p3b_script": false,
+    "later_archived_script_commit": "d2b5959401f5419cf5f77d26017f06d3d4601973",
+    "later_archived_script_sha256": "31bb14697bbef440612dc02393a4c42b81eed1d691c24b3afd0909cce43a60a8",
+    "executed_script_sha256": null,
+    "heldout_exclusion_strictly_verified": false
+  },
+  "engineering_replay": {
+    "input": "existing 160-step raw utility_matrix_history.csv; no model replay",
+    "modes": {
+      "diagonal": {
+        "utility_probes": 32,
+        "uniform_fallback_probes": 32,
+        "zero_gate_probes": 32,
+        "post_first_probe_step_positions_with_changed_weight": 156,
+        "recorded_unlabeled_loss_sum_on_those_positions": 0.06095944400294684
+      },
+      "crossdim": {
+        "utility_probes": 32,
+        "uniform_fallback_probes": 32,
+        "zero_gate_probes": 32,
+        "post_first_probe_step_positions_with_changed_weight": 156,
+        "recorded_unlabeled_loss_sum_on_those_positions": 0.06095944400294684
+      }
+    },
+    "counterfactual_training_benefit_claimed": false
+  },
+  "model_update_simulation": {
+    "performed": false,
+    "reason": "Stopped at prerequisite P3B provenance gate",
+    "supervised_batch_indices": null,
+    "unlabeled_batch_indices": null,
+    "repeated_batches": 0,
+    "optimizer_state": "P3B end-of-training AdamW state unavailable; a later experiment could only compare identical fresh zero-moment AdamW states",
+    "full_encoder_head_incremental_benefit": null,
+    "head_only_score_sign_agreement": null,
+    "head_only_score_rank_agreement": null,
+    "between_batch_uncertainty": null
+  },
+  "dev_accessed": false,
+  "test_accessed": false,
+  "training_started": false,
+  "model_code_modified": false
+}
