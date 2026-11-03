@@ -24,7 +24,10 @@ from scripts.vad_research.train_roberta_vad_p2 import UnlabeledCollator, dev_eva
 from scripts.vad_research.train_roberta_vad_supervised import (
     RobertaVADRegressor, git_commit, load_checked_splits, set_seed, sha256_file,
 )
-from scripts.vad_research.m0.hpl_core import VADUncertainty, bilevel_head_step, weighted_pseudo_mse
+from scripts.vad_research.m0.hpl_core import (
+    VADUncertainty, bilevel_head_step, gradient_statistics, sample_statistics,
+    save_last_checkpoint, weighted_pseudo_mse,
+)
 
 
 def parse_args():
@@ -144,6 +147,7 @@ def main():
                    'selection': 'minimum Dev Macro-MAE including step 0'})
     (out/'run_config.json').write_text(json.dumps(config, indent=2, ensure_ascii=False)+'\n')
     history = []
+    diagnostics = []
     best = float('inf')
     used_ids = set()
     sum_sup = sum_unsup = sum_meta = 0.0
@@ -169,6 +173,8 @@ def main():
             row[f'{dim}_pseudo_abs_residual_avg'] = sum_abs_residual[dim]/max(step,1)
         history.append(row)
         pd.DataFrame(history).to_csv(out/'training_history.csv', index=False)
+        if diagnostics:
+            pd.DataFrame(diagnostics).to_csv(out/'training_diagnostics.csv', index=False)
         print(f'{args.mode} step={step} Dev Macro-MAE={mae:.6f}', flush=True)
         if mae < best-1e-8:
             best = mae
@@ -194,6 +200,7 @@ def main():
         supervised = F.mse_loss(model(**tokens), targets)
         total = supervised
         unsup_value = meta_value = unsup_head_grad = 0.0
+        diagnostic = {'step': step, 'supervised_mse': float(supervised.detach())} if args.mode=='a1' else None
         if args.mode=='a1':
             ulb_tokens, ulb_ids = next(unlabeled_iter)
             used_ids.update(ulb_ids)
@@ -217,6 +224,10 @@ def main():
                                              meta_features, meta_targets,
                                              lambda_u=args.lambda_u, lambda2=args.lambda2)
                     meta_value = info['meta_loss']
+                    for key in ('meta_loss', 'meta_mse', 'meta_logvar_mean', 'meta_regularization_term',
+                                'meta_mse_uncertainty_grad_norm',
+                                'meta_regularization_uncertainty_grad_norm'):
+                        diagnostic[key] = info[key]
                     encoder_opt.zero_grad(set_to_none=True)
                     head_opt.zero_grad(set_to_none=True)
                 model.eval()
@@ -228,18 +239,31 @@ def main():
                 unlabeled_loss = weighted_pseudo_mse(strong, weak, logvar.detach())
                 total = total+args.lambda_u*unlabeled_loss
                 unsup_value = float(unlabeled_loss.detach())
+                head_parameters = tuple(model.head.parameters())
+                supervised_grads = torch.autograd.grad(supervised, head_parameters,
+                                                       retain_graph=True, allow_unused=True)
                 unsup_grads = torch.autograd.grad(args.lambda_u*unlabeled_loss,
-                                                  tuple(model.head.parameters()),
+                                                  head_parameters,
                                                   retain_graph=True, allow_unused=True)
-                squared = [grad.square().sum() for grad in unsup_grads if grad is not None]
-                unsup_head_grad = float(torch.stack(squared).sum().sqrt().detach()) if squared else 0.0
+                sup_head_grad, unsup_head_grad, grad_cosine = gradient_statistics(
+                    supervised_grads, unsup_grads)
+                diagnostic.update({'unlabeled_weighted_mse': unsup_value,
+                                   'supervised_head_grad_norm': sup_head_grad,
+                                   'unsup_head_grad_norm': unsup_head_grad,
+                                   'head_grad_cosine': grad_cosine})
                 detached_logvar = logvar.detach()
-                detached_weight = (0.5*torch.exp(-detached_logvar))
-                detached_residual = (strong-weak).detach().abs()
+                detached_weight = 0.5*torch.exp(-detached_logvar)
+                detached_diff = (strong-weak).detach()
+                detached_residual = detached_diff.abs()
                 for index,dim in enumerate(DIMENSIONS):
                     sum_logvar[dim] += float(detached_logvar[:,index].mean())
                     sum_weight[dim] += float(detached_weight[:,index].mean())
                     sum_abs_residual[dim] += float(detached_residual[:,index].mean())
+                    for name,value in sample_statistics(detached_weight[:,index]).items():
+                        diagnostic[f'{dim}_weight_{name}'] = value
+                    for name,value in sample_statistics(detached_diff[:,index]).items():
+                        diagnostic[f'{dim}_weak_strong_diff_{name}'] = value
+                    diagnostic[f'{dim}_weak_strong_abs_mean'] = float(detached_residual[:,index].mean())
         if not torch.isfinite(total):
             raise FloatingPointError('nonfinite training loss')
         total.backward()
@@ -251,8 +275,11 @@ def main():
         sum_unsup += unsup_value
         sum_meta += meta_value
         sum_unsup_head_grad += unsup_head_grad
+        if diagnostic is not None:
+            diagnostics.append(diagnostic)
         if step%args.eval_every==0 or step==args.steps:
             evaluate(step)
+    save_last_checkpoint(model, uncertainty, args.steps, config, out/'model_last.pth')
 
 
 if __name__=='__main__':

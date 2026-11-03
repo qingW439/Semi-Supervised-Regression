@@ -79,9 +79,11 @@ def checked_features(feature_dir, budget, seed):
 def spectral_pair(mode, x_train, x_valid, x_unlabeled, *, gamma, rank, landmarks, seed):
     if mode=='b0':
         return x_train, x_valid
+    anchor_idx=np.random.default_rng(seed).choice(len(x_train),size=landmarks,replace=False)
+    shared_anchors=x_train[anchor_idx]
     basis_covariates=x_train if mode=='b1' else np.concatenate((x_train,x_unlabeled))
     basis=fit_nystrom_spectral(basis_covariates,gamma=gamma,rank=rank,
-                               landmarks=landmarks,seed=seed)
+                               landmarks=landmarks,seed=seed,external_landmarks=shared_anchors)
     return basis.transform(x_train),basis.transform(x_valid)
 
 
