@@ -175,3 +175,8 @@ _*/
 
 # Private environment files
 .env.*
+
+# large generated feature/OOF artifacts (not tracked in git)
+outputs/oof/
+outputs/**/*.npz
+*.pid
