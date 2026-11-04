@@ -1,0 +1,348 @@
+{
+  "data_sha256": {
+    "labeled": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+    "unlabeled": "2d85de9048c5f2de6f4b15220d81e2d77169fd265e4aa64eb336c2ddf2740bf0",
+    "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c"
+  },
+  "supervised_weight": 0.04599244835596497,
+  "optimizer_steps": 0,
+  "states": {
+    "warmup_fixed95": {
+      "checkpoint_sha256": "a258fdd05399292cda238458f01a16140eb08939cfb541409fbb11dfae92bd74",
+      "cutoffs": [
+        0.95,
+        0.95,
+        0.95
+      ],
+      "temperatures": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "active": [
+        true,
+        true,
+        true
+      ],
+      "rows": [
+        {
+          "batch": 0,
+          "l1": 0.03493719547986984,
+          "supervised": 1.3692328929901123,
+          "unsupervised": 0.0,
+          "kept": [
+            0,
+            0,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.8694248199462891,
+          "weighted_norm_supervised": 0.00896796306489983,
+          "weighted_norm_unsupervised": 0.0,
+          "ratio_supervised_to_l1": 0.01031482292563703,
+          "ratio_unsupervised_to_l1": 0.0,
+          "cosine_l1_supervised": 0.1810507010624855,
+          "cosine_l1_unsupervised": null
+        },
+        {
+          "batch": 1,
+          "l1": 0.047032278031110764,
+          "supervised": 1.3557000160217285,
+          "unsupervised": 0.0,
+          "kept": [
+            0,
+            0,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.8070297837257385,
+          "weighted_norm_supervised": 0.01975125021695447,
+          "weighted_norm_unsupervised": 0.0,
+          "ratio_supervised_to_l1": 0.02447400407674018,
+          "ratio_unsupervised_to_l1": 0.0,
+          "cosine_l1_supervised": 0.04701948979024687,
+          "cosine_l1_unsupervised": null
+        },
+        {
+          "batch": 2,
+          "l1": 0.02769097313284874,
+          "supervised": 1.3862780332565308,
+          "unsupervised": 0.0,
+          "kept": [
+            0,
+            0,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.9965373277664185,
+          "weighted_norm_supervised": 8.97087260467495e-06,
+          "weighted_norm_unsupervised": 0.0,
+          "ratio_supervised_to_l1": 9.002043731549673e-06,
+          "ratio_unsupervised_to_l1": 0.0,
+          "cosine_l1_supervised": -0.10006878943924788,
+          "cosine_l1_unsupervised": null
+        },
+        {
+          "batch": 3,
+          "l1": 0.0320553295314312,
+          "supervised": 1.292320966720581,
+          "unsupervised": 0.013281266205012798,
+          "kept": [
+            3,
+            0,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.9062053561210632,
+          "weighted_norm_supervised": 0.1375997935148019,
+          "weighted_norm_unsupervised": 0.2872190475463867,
+          "ratio_supervised_to_l1": 0.1518417349725082,
+          "ratio_unsupervised_to_l1": 0.3169469763187055,
+          "cosine_l1_supervised": 0.22196615187902702,
+          "cosine_l1_unsupervised": -0.03911239058572519
+        }
+      ]
+    },
+    "a1_best_fixed95": {
+      "checkpoint_sha256": "dd3216f6569f88169003e9044caff27ec0c814cd408c85491808beaadbf41436",
+      "cutoffs": [
+        0.95,
+        0.95,
+        0.95
+      ],
+      "temperatures": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "active": [
+        true,
+        true,
+        true
+      ],
+      "rows": [
+        {
+          "batch": 0,
+          "l1": 0.04280561953783035,
+          "supervised": 1.2083940505981445,
+          "unsupervised": 0.08443648368120193,
+          "kept": [
+            27,
+            21,
+            23
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.9742336869239807,
+          "weighted_norm_supervised": 0.11620633494797912,
+          "weighted_norm_unsupervised": 7.08351469039917,
+          "ratio_supervised_to_l1": 0.11927973391567467,
+          "ratio_unsupervised_to_l1": 7.270857891153886,
+          "cosine_l1_supervised": -0.2111874511635115,
+          "cosine_l1_unsupervised": -0.06167823961846376
+        },
+        {
+          "batch": 1,
+          "l1": 0.04871005937457085,
+          "supervised": 1.1565279960632324,
+          "unsupervised": 0.1856604814529419,
+          "kept": [
+            24,
+            25,
+            23
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.0956120491027832,
+          "weighted_norm_supervised": 0.08078928860757978,
+          "weighted_norm_unsupervised": 3.715397596359253,
+          "ratio_supervised_to_l1": 0.0737389559322021,
+          "ratio_unsupervised_to_l1": 3.3911616793570865,
+          "cosine_l1_supervised": 0.1254257103691217,
+          "cosine_l1_unsupervised": -0.07754182376733453
+        },
+        {
+          "batch": 2,
+          "l1": 0.04785963147878647,
+          "supervised": 1.386175513267517,
+          "unsupervised": 0.8673467636108398,
+          "kept": [
+            25,
+            25,
+            22
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.2912023067474365,
+          "weighted_norm_supervised": 5.5391734819924525e-05,
+          "weighted_norm_unsupervised": 5.43073034286499,
+          "ratio_supervised_to_l1": 4.2899346237583306e-05,
+          "ratio_unsupervised_to_l1": 4.2059484516761,
+          "cosine_l1_supervised": -0.2767704911548146,
+          "cosine_l1_unsupervised": 0.2047542863337404
+        },
+        {
+          "batch": 3,
+          "l1": 0.03241102397441864,
+          "supervised": 2.425096035003662,
+          "unsupervised": 0.09197094291448593,
+          "kept": [
+            26,
+            26,
+            24
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 0.9857697486877441,
+          "weighted_norm_supervised": 2.4996268632934764,
+          "weighted_norm_unsupervised": 2.9199600219726562,
+          "ratio_supervised_to_l1": 2.5357106632872206,
+          "ratio_unsupervised_to_l1": 2.962111614664281,
+          "cosine_l1_supervised": 0.35693240244150237,
+          "cosine_l1_unsupervised": -0.03314826896281666
+        }
+      ]
+    },
+    "a2_best_oof": {
+      "checkpoint_sha256": "f4b8c138cdb67e9f6a444fb23ad368392b3fb0e8dea0547829c1ffe391d940e3",
+      "cutoffs": [
+        0.7,
+        0.8,
+        1.0
+      ],
+      "temperatures": [
+        1.1389052322824809,
+        1.2668391120146967,
+        1.56153900600459
+      ],
+      "active": [
+        true,
+        true,
+        false
+      ],
+      "rows": [
+        {
+          "batch": 0,
+          "l1": 0.04087412729859352,
+          "supervised": 1.2554678916931152,
+          "unsupervised": 0.08082716166973114,
+          "kept": [
+            25,
+            24,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.1832356452941895,
+          "weighted_norm_supervised": 0.048316982092583956,
+          "weighted_norm_unsupervised": 2.4825472831726074,
+          "ratio_supervised_to_l1": 0.040834623504408404,
+          "ratio_unsupervised_to_l1": 2.0981004866155537,
+          "cosine_l1_supervised": -0.17917793133054938,
+          "cosine_l1_unsupervised": 0.06659879658924955
+        },
+        {
+          "batch": 1,
+          "l1": 0.0455181747674942,
+          "supervised": 1.2258963584899902,
+          "unsupervised": 0.1756490170955658,
+          "kept": [
+            26,
+            27,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.041699767112732,
+          "weighted_norm_supervised": 0.07744354212257847,
+          "weighted_norm_unsupervised": 1.9659221172332764,
+          "ratio_supervised_to_l1": 0.07434343806875171,
+          "ratio_unsupervised_to_l1": 1.887225263265827,
+          "cosine_l1_supervised": 0.004680162168154401,
+          "cosine_l1_unsupervised": -0.09024128590439778
+        },
+        {
+          "batch": 2,
+          "l1": 0.042263634502887726,
+          "supervised": 1.3862106800079346,
+          "unsupervised": 0.6238197088241577,
+          "kept": [
+            27,
+            24,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.17486572265625,
+          "weighted_norm_supervised": 4.2310914413246836e-05,
+          "weighted_norm_unsupervised": 1.630882740020752,
+          "ratio_supervised_to_l1": 3.601340442343167e-05,
+          "ratio_unsupervised_to_l1": 1.3881439457893916,
+          "cosine_l1_supervised": 0.03738182267886705,
+          "cosine_l1_unsupervised": -0.17338054889375581
+        },
+        {
+          "batch": 3,
+          "l1": 0.052468955516815186,
+          "supervised": 1.8632395267486572,
+          "unsupervised": 0.10424678027629852,
+          "kept": [
+            28,
+            25,
+            0
+          ],
+          "possible": [
+            28,
+            28,
+            28
+          ],
+          "norm_l1": 1.2308125495910645,
+          "weighted_norm_supervised": 1.2726459635246257,
+          "weighted_norm_unsupervised": 5.323982238769531,
+          "ratio_supervised_to_l1": 1.0339884525449958,
+          "ratio_unsupervised_to_l1": 4.3255833234219265,
+          "cosine_l1_supervised": -0.07388326637996226,
+          "cosine_l1_unsupervised": -0.03072373071442617
+        }
+      ]
+    }
+  },
+  "test_access": "none"
+}

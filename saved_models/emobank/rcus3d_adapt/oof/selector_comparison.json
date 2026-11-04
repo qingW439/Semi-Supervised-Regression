@@ -1,0 +1,44 @@
+{
+  "V": {
+    "raw_ece": 0.018621950424735117,
+    "calibrated_ece": 0.010389129082728092,
+    "fixed_095": {
+      "accepted": 721,
+      "coverage": 0.03164362519201229,
+      "accuracy": 0.9528432732316228
+    },
+    "oof_selected": {
+      "accepted": 10893,
+      "coverage": 0.4780776826859776,
+      "accuracy": 0.8044615808317268
+    }
+  },
+  "A": {
+    "raw_ece": 0.036508281414046724,
+    "calibrated_ece": 0.014162063878126642,
+    "fixed_095": {
+      "accepted": 48,
+      "coverage": 0.0020840569642236887,
+      "accuracy": 0.9583333333333334
+    },
+    "oof_selected": {
+      "accepted": 1473,
+      "coverage": 0.06395449808961445,
+      "accuracy": 0.8778004073319755
+    }
+  },
+  "D": {
+    "raw_ece": 0.049859869874382026,
+    "calibrated_ece": 0.00988500084900219,
+    "fixed_095": {
+      "accepted": 63,
+      "coverage": 0.00283860502838605,
+      "accuracy": 0.8095238095238095
+    },
+    "oof_selected": {
+      "accepted": 0,
+      "coverage": 0.0,
+      "accuracy": null
+    }
+  }
+}

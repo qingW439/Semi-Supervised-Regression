@@ -1,0 +1,66 @@
+{
+  "config": "config/emobank/rcus3d_adapt_a2_lb500_s0.json",
+  "data_root": "/hy-tmp/rankup_project/data/emobank_processed",
+  "checkpoint": "/hy-tmp/rankup_project/Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/warmup/warmup_model.pth",
+  "gradient_record": "/hy-tmp/rankup_project/Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/gradient/gradient_weight.json",
+  "calibration": "/hy-tmp/rankup_project/Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/calibration.json",
+  "pretrain_path": "google/bert_uncased_L-4_H-512_A-8",
+  "mode": "a2",
+  "budget": 500,
+  "seed": 0,
+  "batch_size": 8,
+  "unlabeled_ratio": 1,
+  "eval_batch_size": 16,
+  "max_length": 128,
+  "epochs": 25,
+  "min_delta": 0.0001,
+  "lr": 1e-05,
+  "weight_decay": 0.0005,
+  "dropout": 0.1,
+  "clip_grad_norm": 1.0,
+  "supervised_mixup_weight": 0.04599244835596497,
+  "unsupervised_mixup_weight": 1.0,
+  "mixup_alpha": 0.5,
+  "confidence_cutoff": 0.95,
+  "diagnostic_epochs": [
+    1,
+    5,
+    15,
+    25
+  ],
+  "device": "cuda",
+  "offline": true,
+  "out": "/hy-tmp/rankup_project/Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/a2_lb500_s0",
+  "smoke_steps": 0,
+  "temperatures": [
+    1.1389052322824809,
+    1.2668391120146967,
+    1.56153900600459
+  ],
+  "cutoffs": [
+    0.7,
+    0.8,
+    1.0
+  ],
+  "active": [
+    true,
+    true,
+    false
+  ],
+  "repository_commit": "75d2f3e918d22090fe967d63b69d99471cbcb5f2",
+  "checkpoint_sha256": "a258fdd05399292cda238458f01a16140eb08939cfb541409fbb11dfae92bd74",
+  "gradient_record_sha256": "917143467301e9581d62f98be9fb19c141c7399fa6c1cbf3010cbce489e208e8",
+  "calibration_sha256": "49d2b5b6fc38fcbde9a4bfa2e86b5efef4b5c81caeeee66201905a663f2b4bd8",
+  "initial_rank_head_sha256": "dc44f1a7bed798117012f21a48ca36567fe2d8a58346be1c522083ce16eef728",
+  "split_sha256": {
+    "labeled": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+    "unlabeled": "2d85de9048c5f2de6f4b15220d81e2d77169fd265e4aa64eb336c2ddf2740bf0",
+    "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c"
+  },
+  "source_epoch": 3,
+  "steps_per_epoch": 63,
+  "rng_control": "independent labeled/unlabeled sampler generators; pseudo-view dropout in fork_rng",
+  "pseudo_loss_normalization": "masked two-local-rank sum / all unique candidate pairs across V,A,D",
+  "mixup_rng_control": "separate labeled and unlabeled NumPy generators",
+  "test_access": "none"
+}
