@@ -1,0 +1,161 @@
+{
+  "repository_commit": "e47ff5faffb7959bb3dfcdba0557aafcb3da8031",
+  "source_checkpoint": "/hy-tmp/rankup_project/Semi-Supervised-Regression/saved_models/emobank/supervised_lb500_s0/model_best.pth",
+  "checkpoint_sha256": "173568fa0f09abb7d73e6e52505b9925f05d2f4080a2a89384d5fd5e5b0c3054",
+  "source_epoch": 14,
+  "labeled_split_sha256": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+  "seed": 0,
+  "batch_size": 8,
+  "batches": 4,
+  "dropout_mode": "train",
+  "encoder": "shared BERT parameters only",
+  "optimizer_steps": 0,
+  "test_access": "none",
+  "parameters_unchanged": true,
+  "summary": {
+    "regression_loss": {
+      "mean": 0.03909358894452453,
+      "std": 0.007206720302257969,
+      "min": 0.027879362925887108,
+      "max": 0.046931423246860504
+    },
+    "supervised_rank_loss": {
+      "mean": 0.6923892349004745,
+      "std": 0.019670447803267523,
+      "min": 0.6736119389533997,
+      "max": 0.7228974103927612
+    },
+    "regression_grad_norm": {
+      "mean": 1.0569028537049154,
+      "std": 0.2257249617594184,
+      "min": 0.7876150891386108,
+      "max": 1.4101099747710124
+    },
+    "rank_grad_norm": {
+      "mean": 2.6613453908159075,
+      "std": 0.1520762570925498,
+      "min": 2.5255546487940395,
+      "max": 2.9018372854074035
+    },
+    "gradient_cosine": {
+      "mean": 0.02184743563645114,
+      "std": 0.04397366893797043,
+      "min": -0.04982125182764808,
+      "max": 0.0653740252131709
+    },
+    "weighted_rank_to_reg_0p2": {
+      "mean": 0.5272472517066216,
+      "std": 0.11447459355566884,
+      "min": 0.35964191110653804,
+      "max": 0.6811236694336456
+    },
+    "weighted_rank_to_reg_0p02": {
+      "mean": 0.052724725170662165,
+      "std": 0.011447459355566883,
+      "min": 0.03596419111065381,
+      "max": 0.06811236694336456
+    }
+  },
+  "per_batch": [
+    {
+      "batch": 1,
+      "ids": [
+        "easy_money_9153_9249",
+        "wsj_0120_3120_3137",
+        "hotel-california_34147_34155",
+        "easy_money_13516_13613",
+        "hsus4_1520_1565",
+        "SemEval_1324",
+        "Nathans_Bylichka_37381_37477",
+        "NYTnewswire4_1747_1881"
+      ],
+      "regression_loss": 0.046931423246860504,
+      "supervised_rank_loss": 0.6736119389533997,
+      "regression_grad_norm": 1.4101099747710124,
+      "rank_grad_norm": 2.5356732309851955,
+      "gradient_cosine": 0.02351323086031438,
+      "gold_ties_VAD": [
+        0,
+        0,
+        3
+      ],
+      "weighted_rank_to_reg_0p2": 0.35964191110653804,
+      "weighted_rank_to_reg_0p02": 0.03596419111065381
+    },
+    {
+      "batch": 2,
+      "ids": [
+        "Uprooted_Farming-on-Sand_1650_1710",
+        "captured_moments_20876_20882",
+        "Uprooted_Farming-on-Sand_1897_1912",
+        "NYTnewswire1_2728_2858",
+        "A_defense_of_Michael_Moore_14398_14508",
+        "119CWL041_1439_1449",
+        "IFAW1_2575_2995",
+        "captured_moments_8971_9075"
+      ],
+      "regression_loss": 0.038056280463933945,
+      "supervised_rank_loss": 0.6766353249549866,
+      "regression_grad_norm": 0.9761189965804057,
+      "rank_grad_norm": 2.5255546487940395,
+      "gradient_cosine": 0.048323738299967355,
+      "gold_ties_VAD": [
+        2,
+        6,
+        10
+      ],
+      "weighted_rank_to_reg_0p2": 0.5174685991445106,
+      "weighted_rank_to_reg_0p02": 0.05174685991445107
+    },
+    {
+      "batch": 3,
+      "ids": [
+        "SemEval_1050",
+        "118CWL048_1287_1430",
+        "SemEval_1408",
+        "NYTnewswire4_1494_1528",
+        "WhatToHongKong_14252_14323",
+        "Bartok_18105_18283",
+        "SemEval_809",
+        "Ant_Robot_36913_37156"
+      ],
+      "regression_loss": 0.027879362925887108,
+      "supervised_rank_loss": 0.7228974103927612,
+      "regression_grad_norm": 0.7876150891386108,
+      "rank_grad_norm": 2.682316398076992,
+      "gradient_cosine": -0.04982125182764808,
+      "gold_ties_VAD": [
+        1,
+        2,
+        4
+      ],
+      "weighted_rank_to_reg_0p2": 0.6811236694336456,
+      "weighted_rank_to_reg_0p02": 0.06811236694336456
+    },
+    {
+      "batch": 4,
+      "ids": [
+        "warner1_1303_1411",
+        "WhereToHongKong_40161_40325",
+        "aspca1_34_95",
+        "wildelifewatch1_1958_2098",
+        "WhatToHongKong_22238_22245",
+        "110CYL071_2578_2582",
+        "Nathans_Bylichka_22964_22993",
+        "IFAW1_612_689"
+      ],
+      "regression_loss": 0.04350728914141655,
+      "supervised_rank_loss": 0.6964122653007507,
+      "regression_grad_norm": 1.0537673543296326,
+      "rank_grad_norm": 2.9018372854074035,
+      "gradient_cosine": 0.0653740252131709,
+      "gold_ties_VAD": [
+        3,
+        0,
+        6
+      ],
+      "weighted_rank_to_reg_0p2": 0.5507548271417924,
+      "weighted_rank_to_reg_0p02": 0.05507548271417924
+    }
+  ]
+}
