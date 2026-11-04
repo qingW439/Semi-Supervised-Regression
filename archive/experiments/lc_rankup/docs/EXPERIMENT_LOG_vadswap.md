@@ -1,0 +1,412 @@
+# EmoBank 半监督三维 VAD 回归：模块替换实验记录
+
+日期：2026-10-29  
+实验目录（主机）：`/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-vadswap`（从主项目复制，未改动原项目）  
+数据：EmoBank VAD，`data/emobank_processed`，TRAIN 8062（lb 250/500/1000 + ulb），DEV 1000；TEST 仅在 5.3 节做一次性评估，训练与选模全程不读取。
+
+---
+
+## 0. 结论速览
+
+固定设置：`lb=500`、3 个配对种子（0/1/2）、相同 P1 初始化、160 步续训、DEV 选模。
+
+| 模型 | Macro-MAE ↓ | Macro-CCC ↑ | Macro-R² ↑ |
+|---|---|---|---|
+| P2 supervised control（强基线） | **0.175589 ± 0.000676** | 0.4418 | 0.1750 |
+| Mean Teacher (MT) | 0.175915 | 0.4402 | 0.1745 |
+| MT + 伪标签检索校准（PL-only） | 0.173722 | 0.4396 | 0.1924 |
+| 仅推理期检索校准（Infer-only） | 0.170507 | 0.4468 | 0.2144 |
+| **RCMT（两者结合，最终模型）** | **0.169556 ± 0.000355** | **0.4448** | **0.2247** |
+
+相对 P2 强基线：
+
+- Macro-MAE：**-0.006033**（-3.44%），三个种子分别 -0.005893 / -0.006431 / -0.005774，方向一致；
+- Macro-CCC：**+0.00294**（未损害预测变化能力，反而略升）；
+- Macro-R²：**+0.04976**（+28.4%）。
+
+三个主指标同时改善，满足“不能只降 MAE 而牺牲 CCC/R²”的准入条件。
+
+跨预算复验（每种预算 3 个配对种子，相同 P1 初始化与 160 步协议）：
+
+| 预算 | P2 control MAE | RCMT MAE | ΔMAE | P2 CCC | RCMT CCC | P2 R² | RCMT R² |
+|---|---|---|---|---|---|---|---|
+| lb=250 | 0.181077 | 0.176788 | **-0.004289** | 0.3984 | 0.4061 | 0.1264 | 0.1591 |
+| lb=500 | 0.175589 | 0.169556 | **-0.006033** | 0.4418 | 0.4448 | 0.1750 | 0.2247 |
+| lb=1000 | 0.167765 | 0.163665 | **-0.004100** | 0.4844 | 0.5008 | 0.2388 | 0.2742 |
+
+三个预算下 MAE、CCC、R² 全部改善；配对差值 t 检验（df=2）：lb500 t≈29.5、lb250 t≈8.7、lb1000 t≈5.5，均超过 p<0.05 临界值 4.303。
+
+---
+
+## 1. 已有实验盘点
+
+### 1.1 GitHub 仓库
+
+`https://github.com/qingW439/Semi-Supervised-Regression` 是 RankUp（NeurIPS 2024）官方代码的 fork：
+- `semilearn/`：USB 风格的 SSR 框架，含 `rankup / rankuprda / rda / ucvme / clss / meanteacher / mixmatch / pimodel / fullysupervised`；
+- 原生任务为 UTKFace（图像年龄）、BVCC（音频质量）、Yelp Review（单目标文本评分）；
+- 仓库本身不含 EmoBank/VAD 代码。
+
+### 1.2 主机上的已有实验（`/root/autodl-tmp/rankup_project`）
+
+主项目分支 `vad-m1-v3-pseudolabel-calibration`，另有 9 个实验副本（rank3d、rcus3d、strong-supervised、lact-audit、m1-utility-audit、spectral-readiness、m1-validity-v2 等）。
+
+关键历史结果（DEV，[1,5] 原始尺度）：
+
+| 实验 | Macro-MAE | 说明 |
+|---|---|---|
+| P1 RoBERTa supervised | 0.178264 / 0.179980 / 0.177377（s0/s1/s2） | 20 epoch，L1，AdamW 2e-5 |
+| P2 supervised control | 0.175543 / 0.176286 / 0.174937 | 从 P1 续训 160 步，L1 |
+| Mean Teacher | 0.174788 / 0.175580 / 0.177377 | EMA 伪标签，λ=0.2，不稳定 |
+| HPL A1 / GGR / crossdim | 均为 0.178264（step 0） | 无增益，最优解退回 P1 |
+| Spectral B0/B1/B2 | 0.177539 / 0.180401 / 0.185342 | 无增益 |
+| RankUp-VAD smoke（E2） | 0.268122 | 实现不完整，不可用 |
+| M1 维度效用（多种配置） | 均 0.178264（step 0） | 无增益 |
+| SSR-simregmatch 3D | full 0.175878；filtering 0.175747 | 未超过 P2 |
+
+结论：P2 control（0.175589 ± 0.000676）是当前最强、最稳定的基线；MT 在 s0 有偶然优势但三种子均值更差（0.175915）。
+
+---
+
+## 2. 文献核对与创新边界
+
+已完成系统检索（2023–2026），核心结论：
+
+1. **目前没有已发表的“文本半监督 VAD 回归”工作**；EmoBank 上的半监督设置本身是空白。最接近的半监督连续情绪回归是 Interspeech 2020 的跨文化音视频工作（非文本）。
+2. 半监督回归（SSR）的代表工作：RankUp/RDA（NeurIPS 2024）、SSR-RCUS（AAAI 2026）、HPL（NeurIPS 2025）、GaussianMatch（CVPR 2026）、UCVME（AAAI 2023）、SimRegMatch（ASOC 2024）、UCRC（Neurocomputing 2026）、Ding et al.（FCS 2026）、MASSTER（IJCNN 2025，多目标实例-目标对选择）。
+3. 必须避开的创新重合：
+   - “用标注反馈学习伪标签可靠性” = **HPL 的双层优化**；
+   - “按维度/目标加权” = **MASSTER 的实例-目标对选择**；
+   - “把伪标签分布对齐到标注分布” = **RDA**；
+   - “不确定性加权” = UCVME/HPL/UCRC/GaussianMatch。
+4. 仍相对空白、且本文实际采用的点：**用标注样本在特征空间中的邻域结构，对无标签伪标签做逐维度的检索校准**（不是对齐全局分布，也不是学一个样本级标量不确定性），并在推理期做方差恢复式校准。RDA 对齐的是标签分布，HPL 学的是样本级标量 σ，本文利用的是“标注特征邻域”这一局部、逐维度的信号。
+
+---
+
+## 3. 方法：RCMT（Retrieval-Calibrated Mean Teacher）
+
+### 3.1 基础框架
+
+- 编码器：RoBERTa-base + attention-mask mean pooling + 2 层 MLP 回归头（3 维）；
+- 初始化：冻结的 P1 有监督检查点；
+- 续训：160 步，labeled batch 16，unlabeled batch 64，AdamW lr 5e-6，wd 0.01，L1；
+- 教师：学生权重的 EMA（decay 0.99）。
+
+### 3.2 组件 A：LA-PLC（Label-Anchored Pseudo-Label Calibration）
+
+用 P1 编码器对 500 条标注文本和全部无标签文本编码并 L2 归一化，得到标注特征库 `{f_j, y_j}`。对每条无标签文本 `x_i`：
+
+```
+s_ij = <f_i, f_j> / (||f_i|| ||f_j||)
+w_ij = softmax_j(s_ij / τ)          # 取 top-k 邻居
+knn_i = Σ_j w_ij y_j
+gate_i = clip((max_j s_ij - c0) / (1 - c0), 0, 1)
+a_i = α · gate_i
+p̃_i = (1 - a_i) · p_teacher(x_i) + a_i · knn_i
+```
+
+默认 `k=20, τ=0.1, c0=0.3, α=0.4`。逐维度独立进行（V/A/D 各自校准），因此同一条文本可以对 V 采用更多邻域信息、对 A/D 保留更多教师预测。
+
+**伪标签质量证据**（P1 教师，DEV 上诊断，不参与训练）：
+
+| 伪标签 | Macro-MAE |
+|---|---|
+| 原始教师 `p_teacher` | 0.178264 |
+| LA-PLC 校准后 `p̃`（k=20, α=0.4） | **0.168668** |
+
+即校准使伪标签误差下降约 0.0096（-5.4%），这是“组件改善伪标签质量”的直接证据。
+
+### 3.3 组件 B：VRRC（Variance-Restored Retrieval Calibration，推理期）
+
+对最终学生预测做同样的邻域混合，然后做逐维方差恢复：
+
+```
+q_i = (1 - a_i) · p_student(x_i) + a_i · knn_i
+q̃_i = mean(q) + s · (q_i - mean(q)),   s = 1.2
+```
+
+`s` 的作用：邻域混合会进一步压缩预测方差（CCC 下降），`s>1` 把方差恢复到接近标注分布，从而在降 MAE 的同时保住/提升 CCC 与 R²。`s=1.2` 在 DEV 上固定，三种子一致使用。
+
+### 3.4 与已有方法的关系
+
+| 方法 | 校准对象 | 粒度 | 本文差异 |
+|---|---|---|---|
+| RDA | 伪标签 → 标注标签分布（分位数对齐） | 全局、单目标 | 本文用特征邻域、逐维度、局部 |
+| HPL | 样本级标量 σ，双层优化 | 样本 | 本文不学标量不确定性，直接用邻域标签 |
+| UCVME/UCRC | 异方差/一致性 | 样本 | 同上 |
+| MASSTER | 实例-目标对选择（主动学习） | 目标 | 本文是伪标签侧、非主动查询 |
+| GaussianMatch | 多视图高斯一致性过滤 | 样本 | 本文用标注邻域而非多视图 |
+
+---
+
+## 4. 模块筛选记录（失败模块）
+
+在 `lb=500, seed=0` 上逐一替换/加入模块（均从同一 P1 初始化，160 步）：
+
+| 模块 | 来源 | 配置 | 最优 DEV Macro-MAE | 结论 |
+|---|---|---|---|---|
+| CCC loss（监督） | 维度情绪回归常用 | w=0.3 | 0.178264（step 0） | 无增益 |
+| CCC loss（监督+伪标签） | 同上 | w=0.3 | 0.178264 | 无增益 |
+| 成对排序一致性 | RankUp / SSR-RCUS | w=0.1 | 0.177701 | 略差于 MT |
+| 成对排序一致性 | 同上 | w=0.3 | 0.177041 | CCC 升、MAE 降 |
+| 教师 dropout 分歧加权 | SimRegMatch / Ding | τ=0.05 | 0.178264 | 无增益 |
+| 分歧加权 + top-q 过滤 | GaussianMatch 风格 | q=0.5 | 0.178264 | 无增益 |
+| 异方差不确定性加权 | HPL / UCVME | Laplace NLL | 0.178264 | 无增益 |
+| 师生一致性加权 | — | τ=0.05 | 0.174066 | 小幅但不如检索校准 |
+| 分布对齐 DA | RDA / ReMixMatch | s=1 | 0.206（诊断） | MAE 明显变差 |
+| EMA decay 0.999 | Mean Teacher | — | 0.173949 | 有增益但不跨种子稳定 |
+| **LA-PLC（伪标签检索校准）** | 本文 | α=0.4, k=20 | **0.173079** | 稳定增益 |
+| **LA-PLC + VRRC** | 本文 | +s=1.2 | **0.169650** | 最终 |
+
+结论：排序、CCC、不确定性、分歧过滤、分布对齐等“常规模块替换”在 EmoBank 500 标签上均未带来稳定收益；真正有效的是利用标注特征邻域的检索校准 + 方差恢复。
+
+---
+
+## 5. 最终三种子结果（lb=500）
+
+| seed | P2 control MAE | RCMT MAE | ΔMAE | RCMT CCC | RCMT R² |
+|---|---|---|---|---|---|
+| 0 | 0.175543 | 0.169650 | -0.005893 | 0.4488 | 0.2265 |
+| 1 | 0.176286 | 0.169855 | -0.006431 | 0.4420 | 0.2285 |
+| 2 | 0.174937 | 0.169163 | -0.005774 | 0.4435 | 0.2192 |
+| **mean** | **0.175589** | **0.169556** | **-0.006033** | **0.4448** | **0.2247** |
+| std | 0.000676 | 0.000355 | — | — | — |
+
+消融（三种子均值）：
+
+| 配置 | Macro-MAE | Macro-CCC | Macro-R² |
+|---|---|---|---|
+| P2 control | 0.175589 | 0.4418 | 0.1750 |
+| MT | 0.175915 | 0.4402 | 0.1745 |
+| + LA-PLC only | 0.173722 | 0.4396 | 0.1924 |
+| + VRRC only | 0.170507 | 0.4468 | 0.2144 |
+| + both（RCMT） | 0.169556 | 0.4448 | 0.2247 |
+
+两个组件均有独立贡献且可叠加；LA-PLC 主要降 MAE，VRRC 同时提升 CCC/R²。
+
+### 5.1 不同标注预算的逐种子结果
+
+lb=250（RCMT: k=10, α=0.4, s=1.2）：
+
+| seed | control | RCMT | Δ |
+|---|---|---|---|
+| 0 | 0.182815 | 0.179521 | -0.003294 |
+| 1 | 0.182656 | 0.177804 | -0.004852 |
+| 2 | 0.177760 | 0.173040 | -0.004720 |
+| mean | 0.181077 | 0.176788 | -0.004289 |
+
+lb=1000（RCMT: k=20, α=0.4, s=1.2）：
+
+| seed | control | RCMT | Δ |
+|---|---|---|---|
+| 0 | 0.172257 | 0.167244 | -0.005013 |
+| 1 | 0.166347 | 0.163759 | -0.002588 |
+| 2 | 0.164691 | 0.159991 | -0.004700 |
+| mean | 0.167765 | 0.163665 | -0.004100 |
+
+注：lb=1000 的 control 在 s0 的最优解是 step 0（P1 本身），说明该预算下续训容易过拟合；RCMT 仍能在 32–128 步取得更低误差。
+
+### 5.2 近三年框架基座复现：RankUp-3D（NeurIPS 2024）
+
+为回应“基座太旧”，把 RankUp 官方实现忠实改造成三维版本（`scripts/vad_research/train_rankup3d.py`）：
+
+- **ARC**：每个 V/A/D 一个 2 类排序头，pair logit = `a_i - a_j`，标注对用 `sign(y_i-y_j)` 做 CE；
+- **RDA**：逐维把无标签伪标签的分位数映射到标注边际（官方 `RDAHook` 逻辑）；
+- **weak/strong**：EmoBank 没有回译增广，strong 用 15% token masking；
+- **EMA 教师、p_cutoff=0.95、warmup=0.4** 按论文默认。
+
+lb=500, seed=0 的逐项结果（DEV Macro-MAE）：
+
+| 变体 | MAE | 说明 |
+|---|---|---|
+| RankUp-3D 原版（ARC w=1.0 + RDA） | 0.178264（step 0） | ARC 全权重，训练后退化到 0.202 |
+| ARC w=0.05 + RDA | 0.178011 | 最好的一次 raw |
+| 仅 RDA（无 ARC） | 0.177266 | RDA 本身也救不回来 |
+| ARC w=0.05 + RDA，1000 步 | 0.178264（step 0） | 延长训练无效 |
+| ARC w=0.05 + RDA + VRRC | 0.172111 | 换入推理校准 |
+| **ARC w=0.05 + GCF（CVPR 2026）+ LA-PLC + VRRC** | **0.170953 / 0.170643 / 0.169151**（三种子） | 近三年基座下的最佳，均值 **0.170249** |
+| 无 ARC + GCF + LA-PLC + VRRC | 0.170989 | 与上一行基本持平 |
+| AGDS soft（完整 GaussianMatch 课程） | 0.172111（step 0） | 未超过 GCF |
+| AGDS hard（置信区间硬过滤） | 0.171290 | 未超过 GCF |
+| AGDS λ=2.0→0.8 | 0.171745 | 未超过 GCF |
+
+**AGDS 结论**：把 GCF 升级为完整 GaussianMatch（多视图 + 高斯置信区间 + λ 退火）后，DEV 反而从 0.170953 退到 0.1713–0.1721；在 EmoBank 上，简单的 exp(−σ/τ) 软加权已经足够，复杂课程没有额外收益。最终保留 GCF。
+
+对照：P2 control 0.175543（三种子均值 0.175589）；MT-based RCMT **0.169650**（均值 0.169556）。
+
+三种子汇总：
+
+| 模型 | Macro-MAE | Macro-CCC | Macro-R² |
+|---|---|---|---|
+| P2 control | 0.175589 | 0.4418 | 0.1750 |
+| RankUp-3D base（ARC 0.05 + RDA） | 0.178011 | 0.3819 | 0.1501 |
+| **RankUp-3D + GCF + LA-PLC + VRRC** | **0.170249** | **0.4450** | **0.2215** |
+| MT-based RCMT | 0.169556 | 0.4448 | 0.2247 |
+
+RankUp-3D 基座本身比 P2 差 0.0024；换入 GCF + LA-PLC + VRRC 后比基座提升 **0.0078**，比 P2 提升 **0.0053**，CCC/R² 也同时改善。与 MT-based RCMT 相比 MAE 仅差 0.0007（CCC 还略高 0.0003），基本持平。
+
+结论：
+
+1. **忠实复现的 RankUp-3D 在 EmoBank VAD 上跑不过强监督 P2**（0.1780 vs 0.1755）；ARC 全权重会显著破坏回归（0.202），降到 0.05 仅能止损，延长到 1000 步也无改善。
+2. 换入 GaussianMatch 的多视图高斯过滤 + LA-PLC + VRRC 后，RankUp-3D 从 0.1783 提升到 **0.17095**（-0.0073），超过 P2 0.0046，但仍比 MT-based RCMT 差 0.0013。
+3. 这说明：近三年 SSR 框架的增益不能自动迁移到三维 VAD；真正跨框架有效的是“检索校准 + 方差恢复”这一模块，而不是 ARC/RDA 本身。
+
+### 5.3 一次性 TEST 结果（固定 DEV 选定的超参，不回调）
+
+所有模型只读取一次 `test_gold.parquet`；RCMT 在 TEST 上使用与 DEV 完全相同的校准参数（bank 仅用对应预算的 TRAIN 标注）。
+
+| 预算 | 方法 | Macro-MAE ↓ | Macro-CCC ↑ | Macro-R² ↑ |
+|---|---|---|---|---|
+| lb=250 | control | 0.181732 | 0.3930 | 0.1452 |
+| lb=250 | **RCMT** | **0.179517** | 0.3921 | **0.1633** |
+| lb=500 | control | 0.177263 | 0.4395 | 0.1945 |
+| lb=500 | **RCMT** | **0.172406** | 0.4356 | **0.2316** |
+| lb=1000 | control | 0.169384 | 0.4761 | 0.2504 |
+| lb=1000 | **RCMT** | **0.165767** | **0.4939** | **0.2841** |
+
+RankUp-3D + GCF + LA-PLC + VRRC 的一次性 TEST（lb=500，三种子）：
+
+| seed | Macro-MAE | Macro-CCC | Macro-R² |
+|---|---|---|---|
+| 0 | 0.168955 | 0.4584 | 0.2550 |
+| 1 | 0.175176 | 0.4155 | 0.2087 |
+| 2 | 0.174679 | 0.4318 | 0.2190 |
+| **mean** | **0.172937** | **0.4353** | **0.2276** |
+
+TEST 对照（lb=500）：
+
+| 模型 | Macro-MAE | Macro-CCC | Macro-R² |
+|---|---|---|---|
+| P2 control | 0.177263 | 0.4395 | 0.1945 |
+| **RankUp-3D + GCF + LA-PLC + VRRC** | **0.172937** | 0.4353 | **0.2276** |
+| MT-based RCMT | 0.172406 | 0.4356 | 0.2316 |
+
+RankUp-3D 变体 TEST 比 P2 降 MAE 0.00433、升 R² 0.0331，CCC 低 0.0042；与 RCMT 仅差 0.00053 MAE，基本持平。
+
+TEST 上相对 control 的 ΔMAE：lb250 **-0.00222**、lb500 **-0.00486**、lb1000 **-0.00362**；三种子方向全部一致。
+
+需要如实说明：lb500 的 TEST CCC 略低 0.004（在种子噪声内），但 R² 提升 0.037；lb1000 三项全部提升。TEST 上的绝对增益小于 DEV（DEV 存在选模乐观偏差），但 lb500/lb1000 仍明显超过 0.002 的工程目标。
+
+---
+
+## 6. 复现命令
+
+```bash
+cd /root/autodl-tmp/rankup_project/Semi-Supervised-Regression-vadswap
+ENV=/root/autodl-tmp/rankup_project/envs/rankup/bin/python
+ORIG=/root/autodl-tmp/rankup_project/Semi-Supervised-Regression
+
+# P1（已有 lb500，可跳过；250/1000 需新训）
+$ENV scripts/vad_research/train_roberta_vad_supervised.py \
+  --budget 500 --seed 0 --device cuda --offline \
+  --model /root/autodl-tmp/rankup_project/pretrained/roberta-base \
+  --out saved_models/vad_research/p1_roberta_lb500_s0
+
+# RCMT（lb500, seed0；seed1/2 改 --seed 与 --p1-dir）
+$ENV scripts/vad_research/train_vad_modules.py \
+  --mode mean_teacher --budget 500 --seed 0 \
+  --p1-dir $ORIG/saved_models/vad_research/p1_roberta_lb500_s0 \
+  --knn-calib 0.4 --knn-k 20 \
+  --eval-knn-alpha 0.4 --eval-knn-k 20 --eval-scale 1.2 \
+  --diag-teacher --device cuda \
+  --out saved_models/vad_research/final_full_s0
+```
+
+结果目录：`saved_models/vad_research/final_full_s{0,1,2}/dev_metrics_best.json`。
+
+---
+
+### 5.4 P0 补证据：完整消融 + 跨预算三种子（worktree 统一代码）
+
+**消融（lb=500, seed0，8 组）**
+
+| 配置 | Macro-MAE | Macro-CCC | Macro-R² | best step |
+|---|---|---|---|---|
+| 基座（无校准） | 0.178264 | 0.4328 | 0.1602 | 0 |
+| + GCF | 0.178264 | 0.4328 | 0.1602 | 0 |
+| + LA-PLC | 0.178264 | 0.4328 | 0.1602 | 0 |
+| + GCF + LA-PLC | 0.176550 | 0.4367 | 0.1709 | 64 |
+| + VRRC | 0.172111 | 0.4437 | 0.2094 | 0 |
+| + GCF + VRRC | 0.172111 | 0.4437 | 0.2094 | 0 |
+| + LA-PLC + VRRC | 0.171867 | 0.4340 | 0.2038 | 96 |
+| **+ GCF + LA-PLC + VRRC（全组合）** | **0.171306** | **0.4459** | **0.2149** | 64 |
+
+解读：
+
+1. **GCF、LA-PLC 单独使用都没有训练增益**；两者合起来（无 VRRC）才把基座从 0.178264 降到 0.176550（-0.0017）。
+2. **VRRC 是主要贡献者**：只做推理期校准就把 P1 从 0.178264 拉到 0.172111。
+3. 全组合在 VRRC 基础上再降 0.0008，并把 CCC 从 0.4437 提到 0.4459、R² 从 0.2094 提到 0.2149，是唯一三项同时最好的配置。
+4. 结论要如实写：**增益主要来自推理期方差恢复校准，训练期的 GCF+LA-PLC 是次级但真实的贡献**。
+
+**跨预算三种子（同一 worktree 代码，lb500 s0 = 全组合消融）**
+
+| 预算 | 本模型 MAE | CCC | R² | P2 MAE | ΔMAE |
+|---|---|---|---|---|---|
+| 250 | **0.176735** | 0.4017 | 0.1616 | 0.181077 | **-0.004342** |
+| 500 | **0.170476** | 0.4429 | 0.2173 | 0.175589 | **-0.005113** |
+| 1000 | **0.163117** | 0.4971 | 0.2794 | 0.167765 | **-0.004648** |
+
+三个预算下 MAE、CCC、R² 全部改善；lb500 的三种子为 0.171306 / 0.170968 / 0.169153。
+
+注：worktree 统一代码下 lb500 s0 = 0.171306，与早期 copy 代码的 0.170953 差 0.00035（bank 模块化后的 RNG/顺序差异）；论文主表应统一采用 worktree 这一套。
+
+
+
+### 5.5 LC-RankUp-VAD：RDA → 局部条件校准的干净替换（seed0 NO-GO）
+
+独立 worktree：`/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-lcrankup`，分支 `m1/lc-rankup-vad`。
+
+- 新增 `scripts/vad_research/retrieval_bank.py`、`local_pl_calib.py`；
+- `train_rankup3d.py` 增加 `--pl-calib {none,rda,local}`、`--knn-alpha/tau/c0`；
+- CPU contract tests：**6 passed**；
+- 5-step / 20-step smoke 正常。
+
+seed0 完整 160 步（ARC 0.05，其余一致）：
+
+| 变体 | Macro-MAE | Macro-CCC | Macro-R² | best step |
+|---|---|---|---|---|
+| C0（无校准） | 0.178264 | 0.4328 | 0.1602 | 0 |
+| C1（原始 RDA） | 0.178011 | 0.3819 | 0.1501 | 96 |
+| M1（局部条件校准） | 0.178264 | 0.4328 | 0.1602 | 0 |
+
+Gate 结果：**NO-GO**（MAE 无改善、0/3 维改善、best step = 0、未超过 RDA）。
+
+解释：RankUp-3D 基座本身在 VAD 上不稳定；把 RDA 单独换成局部校准**不能修复基座**。此前 RankUp-3D 上的正增益来自 GCF + VRRC（0.17025），不是“RDA→local”这一步本身。按预注册方案，LC-RankUp 不进入 seed1/2；下一步执行唯一备选 **E-HPL-VAD**。
+
+
+
+### 7.1 一条主线
+
+低标注三维 VAD 回归 → 无标签监督未必逐维有效 → 用标注特征邻域校准伪标签与预测 → 在近三年框架（RankUp-3D, 2024）上做模块替换验证 → DEV + 一次性 TEST 双证据。
+
+### 7.2 三层结论
+
+1. **框架层（负结果）**：忠实复现的 RankUp-3D 在 EmoBank 上 0.1780，低于 P2 的 0.1755；ARC 全权重退化到 0.202；1000 步无效；HPL（2025）bilevel 0.1783；AGDS 0.1713–0.1721 不如 GCF；LC-RankUp（RDA→local）seed0 NO-GO。→ **近三年 SSR 框架的增益不能自动迁移到三维 VAD。**
+2. **模块层（正结果）**：GCF（2026）+ LA-PLC + VRRC 把 RankUp-3D 从 0.1780 提升到 **0.17048**（DEV，三种子，worktree 统一代码；lb500 TEST 0.17294 对 P2 0.17726，见 5.3）。消融显示 VRRC 是主要贡献者，GCF+LA-PLC 是次级但真实的训练增益。
+3. **机理层**：LA-PLC 把教师伪标签在 DEV 上的 MAE 从 0.1783 降到 0.1687（-5.4%）；VRRC 把预测方差拉回，CCC/R² 提升。
+
+### 7.3 可写的论文贡献
+
+- **C1（设置）**：首个文本半监督三维 VAD 回归研究（EmoBank，250/500/1000 预算）。
+- **C2（方法）**：Label-Anchored Pseudo-Label Calibration（LA-PLC）——用标注特征邻域逐维校准伪标签。
+- **C3（方法）**：Variance-Restored Retrieval Calibration（VRRC）——推理期邻域校准 + 方差恢复。
+- **C4（实证）**：近三年 SSR 框架在 VAD 上的负迁移证据，以及“换入 GCF + 检索校准”带来的稳定提升。
+
+### 7.4 边界与公平性
+
+- `k/α/s` 由 DEV 选定，TEST 只评一次；论文需写明或补 TRAIN 内部交叉验证。
+- GCF/AGDS 的文本视图是 token masking + dropout，不是 GaussianMatch 原论文的图像增广。
+- RankUp-3D 是我们对官方标量实现的忠实三维改造（逐维 ARC/RDA），不是官方 3D 版本。
+
+### 7.5 建议的论文主模型
+
+**RankUp-3D（2024）+ GCF（2026）+ LA-PLC + VRRC** 作为主模型（近三年基座、DEV/TEST 均超 P2）；MT-based RCMT 作为“模块与基座无关”的消融证据。
+
+## 8. 待完成
+
+1. **E-HPL-VAD（唯一备选）**：HPL 基座 + 共享 encoder、双回归 head × 每 head 2 次 dropout 的 ensemble pseudo-target（mean/variance），C0/C1/M1 seed0 gate。
+2. TEST 已在 5.3 节做过一次性评估（RCMT/control 一次，RankUp-3D 一次）；LC-RankUp 这轮起不再读取 TEST，直到最终模型冻结后再评一次。
+3. 领域迁移（中英文旅游评论/游记）实验。
+4. 敏感性分析：k / α / s 的网格与标注预算-收益曲线。
+5. 与 RankUp、HPL 官方实现的公平对比（当前 HPL 为仓库内复现版本，无增益）。
+6. 消融“固定 gate vs 邻域离散度 gate”，检验逐维度可靠性门控是否进一步增益。
