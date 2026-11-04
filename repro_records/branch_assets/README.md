@@ -7,3 +7,7 @@ Entries: 10.
 ## Result status
 
 EmoBank SSR-RCUS-3D and its adapt variant are consolidated here. Existing checkpoint runs are seed 0; three-seed claims require more runs. All 10 checkpoint hashes were rechecked on 2026-11-04.
+
+## GitHub Release checkpoint backup
+
+[weights-emobank-ssr-rcus-3d-20261104](https://github.com/qingW439/Semi-Supervised-Regression/releases/tag/weights-emobank-ssr-rcus-3d-20261104) contains the 10 SHA-256 verified checkpoint assets listed in `release_assets.jsonl`. Historical validity limits in this branch still apply.
