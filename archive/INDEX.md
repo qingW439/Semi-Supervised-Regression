@@ -35,3 +35,7 @@ This branch keeps the original Git commits reachable after the active branch lis
 | `vad-m1-v3-pseudolabel-calibration` | `e45575d642b301e0410642054cef6ee0999bdc7d` |
 
 The active branches are `main`, `rankup-reproduction`, `emobank-rankup-3d`, `emobank-ssr-rcus-3d`, `emobank-strong-supervised`, and `m1/avrrc-oof`. `emobank-ssr-rcus-3d-adapt` is retained in the `emobank-ssr-rcus-3d` history.
+
+## Former default branch
+
+`main` ended at `7ed6d26`; that commit is an ancestor of this archive branch and of `rankup-reproduction`. The repository default branch was moved to `rankup-reproduction` before removing `main`.
