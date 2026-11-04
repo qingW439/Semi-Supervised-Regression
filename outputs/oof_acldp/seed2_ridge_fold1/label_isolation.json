@@ -1,0 +1,14 @@
+{
+  "fold": 1,
+  "train_n": 400,
+  "holdout_n": 100,
+  "train_holdout_overlap": 0,
+  "anchor_bank_n": 400,
+  "holdout_labels_used_in_training": false,
+  "raw_csv_read": false,
+  "test_read": false,
+  "dev_read": false,
+  "p1_epochs": 10,
+  "jacf_steps": 96,
+  "note": "held-out labels are used only to write the OOF output row"
+}

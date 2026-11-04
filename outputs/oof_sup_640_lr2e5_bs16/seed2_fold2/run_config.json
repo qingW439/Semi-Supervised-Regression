@@ -1,0 +1,15 @@
+{
+  "fold": 2,
+  "manifest": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-avrrc/outputs/p0_s2/fold_manifest.json",
+  "data_seed": 2,
+  "data_root": "/root/autodl-tmp/rankup_project/data/emobank_processed",
+  "pretrain_path": "/root/autodl-tmp/rankup_project/pretrained/roberta-base",
+  "out_dir": "/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-comp2/outputs/oof_sup_640_lr2e5_bs16/seed2_fold2",
+  "steps": 640,
+  "batch_size": 16,
+  "lr": 2e-05,
+  "weight_decay": 0.01,
+  "clip_grad_norm": 1.0,
+  "device": "cuda",
+  "save_ckpt": false
+}
