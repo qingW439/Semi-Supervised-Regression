@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-11-04 Asia/Shanghai",
+  "method": "streaming SHA-256 of every listed retained checkpoint",
+  "branches": {
+    "rankup-reproduction": 18,
+    "emobank-rankup-3d": 6,
+    "emobank-ssr-rcus-3d": 10,
+    "emobank-strong-supervised": 8,
+    "m1/avrrc-oof": 28
+  },
+  "total": 70,
+  "mismatches": 0,
+  "note": "Checkpoint bytes remain on the experiment host; GitHub branches contain hash manifests and small results."
+}

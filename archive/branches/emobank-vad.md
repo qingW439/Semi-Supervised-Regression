@@ -1,0 +1,79 @@
+# emobank-vad
+
+Original tip: `1125b7841bda62aae485f0e9ce462a8b5739814c`. The commit is reachable from `archive/legacy-20261104`.
+
+Changed paths relative to main: 71.
+
+- `.gitignore`
+- `config/reproduction/rankup_yelp_review_lb250_s0.yaml`
+- `config/reproduction/rankup_yelp_review_lb250_s1.yaml`
+- `config/reproduction/rankup_yelp_review_lb250_s2.yaml`
+- `config/reproduction/rankup_yelp_smoke.yaml`
+- `config/reproduction/rankuprda_yelp_review_lb250_s0.yaml`
+- `config/reproduction/rankuprda_yelp_review_lb250_s1.yaml`
+- `config/reproduction/rankuprda_yelp_review_lb250_s2.yaml`
+- `config/reproduction/supervised_yelp_review_lb250_s0.yaml`
+- `config/reproduction/supervised_yelp_review_lb250_s1.yaml`
+- `config/reproduction/supervised_yelp_review_lb250_s2.yaml`
+- `eval.py`
+- `repro_records/emobank/dataset_manifest.json`
+- `repro_records/emobank/e1/README.md`
+- `repro_records/emobank/e1/lb1000_s0/constant_baseline_dev.json`
+- `repro_records/emobank/e1/lb1000_s0/dev_metrics_best.json`
+- `repro_records/emobank/e1/lb1000_s0/run_config.json`
+- `repro_records/emobank/e1/lb1000_s0/training_history.csv`
+- `repro_records/emobank/e1/lb250_s0/constant_baseline_dev.json`
+- `repro_records/emobank/e1/lb250_s0/dev_metrics_best.json`
+- `repro_records/emobank/e1/lb250_s0/run_config.json`
+- `repro_records/emobank/e1/lb250_s0/training_history.csv`
+- `repro_records/emobank/e1/lb500_s0/constant_baseline_dev.json`
+- `repro_records/emobank/e1/lb500_s0/dev_metrics_best.json`
+- `repro_records/emobank/e1/lb500_s0/run_config.json`
+- `repro_records/emobank/e1/lb500_s0/training_history.csv`
+- `repro_records/emobank/e1/training_script.sha256`
+- `repro_records/emobank/e2/README.md`
+- `repro_records/emobank/e2/rankonly_diag_lb250_s0/arc_dev_diagnostics.json`
+- `repro_records/emobank/e2/rankonly_diag_lb250_s0/dev_metrics_best.json`
+- `repro_records/emobank/e2/rankonly_diag_lb250_s0/run_config.json`
+- `repro_records/emobank/e2/rankonly_diag_lb250_s0/training_history.csv`
+- `repro_records/emobank/e2/rankupvad_smoke_lb250_s0/arc_dev_diagnostics.json`
+- `repro_records/emobank/e2/rankupvad_smoke_lb250_s0/dev_metrics_best.json`
+- `repro_records/emobank/e2/rankupvad_smoke_lb250_s0/run_config.json`
+- `repro_records/emobank/e2/rankupvad_smoke_lb250_s0/training_history.csv`
+- `repro_records/emobank/labeled_ids_lb1000_s0.csv`
+- `repro_records/emobank/labeled_ids_lb1000_s1.csv`
+- `repro_records/emobank/labeled_ids_lb1000_s2.csv`
+- `repro_records/emobank/labeled_ids_lb250_s0.csv`
+- `repro_records/emobank/labeled_ids_lb250_s1.csv`
+- `repro_records/emobank/labeled_ids_lb250_s2.csv`
+- `repro_records/emobank/labeled_ids_lb500_s0.csv`
+- `repro_records/emobank/labeled_ids_lb500_s1.csv`
+- `repro_records/emobank/labeled_ids_lb500_s2.csv`
+- `repro_records/emobank/source_commit.txt`
+- `repro_records/yelp250/README.md`
+- `repro_records/yelp250/checkpoints.sha256`
+- `repro_records/yelp250/configs.sha256`
+- `repro_records/yelp250/pip-freeze.txt`
+- `repro_records/yelp250/test_metrics_by_seed.csv`
+- `repro_records/yelp250/test_metrics_summary.csv`
+- `scripts/emobank/check_e1_backbone.py`
+- `scripts/emobank/diagnose_emobank_oof_reliability.py`
+- `scripts/emobank/diagnose_emobank_rankup_e2.py`
+- `scripts/emobank/diagnose_emobank_teacher_uncertainty.py`
+- `scripts/emobank/prepare_emobank.py`
+- `scripts/emobank/train_emobank_hetero_vad_controlled_v2.py`
+- `scripts/emobank/train_emobank_hetero_vad_online_v3.py`
+- `scripts/emobank/train_emobank_hetero_vad_pilot.py`
+- `scripts/emobank/train_emobank_m1_calibration.py`
+- `scripts/emobank/train_emobank_rankup_vad.py`
+- `scripts/emobank/train_emobank_selection_ablation.py`
+- `scripts/emobank/train_emobank_supervised.py`
+- `scripts/emobank/train_emobank_supervised_huber.py`
+- `scripts/eval_yelp_nine_models.py`
+- `semilearn/algorithms/rankup_vad/__init__.py`
+- `semilearn/algorithms/rankup_vad/rankup_vad.py`
+- `semilearn/datasets/nlp_datasets/emobank.py`
+- `semilearn/nets/bert/bert_vad.py`
+- `setup_rankup.sh`
+
+Restore with `git branch emobank-vad 1125b7841bda62aae485f0e9ce462a8b5739814c`.
