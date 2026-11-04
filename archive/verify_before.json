@@ -1,0 +1,835 @@
+{
+ "phase": "before",
+ "p0_total": 137,
+ "load_ok": 137,
+ "load_fail": 0,
+ "metrics_checked": 1,
+ "metrics_match": 1,
+ "metrics_mismatch": [],
+ "failures": [],
+ "detail": [
+  {
+   "path": "SSR-simregmatch/saved_models/vad_research/simregmatch3d_seed0_20261028T102435Z/calibration_only/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "SSR-simregmatch/saved_models/vad_research/simregmatch3d_seed0_20261028T102435Z/consistency_only/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "SSR-simregmatch/saved_models/vad_research/simregmatch3d_seed0_20261028T102435Z/filtering_only/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "SSR-simregmatch/saved_models/vad_research/simregmatch3d_seed0_20261028T102435Z/simregmatch_full/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "SSR-simregmatch/saved_models/vad_research/simregmatch3d_seed0_20261028T102435Z/supervised_only/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/emobank/hetero_v2_control_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29027843,
+   "metrics_match": true
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/emobank/supervised_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s0/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s1/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s2/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankup_yelp_review_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s0/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s1/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s2/latest_model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/rankuprda_yelp_review_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29027843
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s0/latest_model.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s1/latest_model.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s2/latest_model.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/reproduction/nlp/supervised_yelp_review_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 75,
+   "params": 29026817
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a0_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a1_diagnostic_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a1_diagnostic_s0/model_last.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a1_lambda2_0_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a1_lambda2_0_s0/model_last.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m0/hpl_a1_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1/m0_a1_ref_s0_steps5_20261027T1235Z/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1/m0_a1_ref_s0_steps5_20261027T1235Z/model_last.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/oof_fold_0.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/oof_fold_1.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/oof_fold_2.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/oof_fold_3.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/oof_fold_4.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/m1_v3_gpu_seed0_20261028T063714Z_7002/build/reference_400.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_control_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_control_lb500_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_control_lb500_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_mean_teacher_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_mean_teacher_lb500_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p2_mean_teacher_lb500_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression/saved_models/vad_research/p3b_probe400_100_lb500_s0/teacher_probe_only.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold0/jacf_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold0/p1_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold1/jacf_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold1/p1_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold2/jacf_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold2/p1_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold3/jacf_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold3/p1_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold4/jacf_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/outputs/oof/fold4/p1_final.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/a0.75_s0/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/a0.75_s1/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/a0.75_s2/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/sup_s0/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/sup_s1/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/alpha_sweep/sup_s2/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_jacf_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_jacf_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_jacf_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_sup_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_sup_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/attr_sup_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/diff_d5s_s0/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/diff_s005_s0/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/diff_s5_s1/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-avrrc/saved_models/vad_research/diff_s5_s2/model_step96.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-cpr/saved_models/vad_research/m1_cpr_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-cpr/saved_models/vad_research/m1_cpr_s1/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-cpr/saved_models/vad_research/m1_cpr_s2/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-jacfabl/saved_models/vad_research/abl_anchor_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-jacfabl/saved_models/vad_research/abl_jacf_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-jacfabl/saved_models/vad_research/abl_multi_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-jacfabl/saved_models/vad_research/abl_no_rel_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-jacfabl/saved_models/vad_research/abl_seq_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/lcrankup_c0_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/lcrankup_c1_rda_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb1000_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb1000_s1/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb1000_s2/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb500_s1/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-lcrankup/saved_models/vad_research/rk_lb500_s2/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/p1a_rank3d_norm_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/p1b_arc002_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/p1c_rank3d_norm_arc002_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/rank3d_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/rank3d_supervised_arc_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rank3d/saved_models/emobank/rank3d_supervised_control_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d/saved_models/emobank/rcus3d_r0_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d/saved_models/emobank/rcus3d_r1_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/a0_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/a1_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/a2_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/fold_0/model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/fold_1/model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/fold_2/model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/fold_3/model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-rcus3d-adapt/saved_models/emobank/rcus3d_adapt/oof/fold_4/model.pth",
+   "load": true,
+   "tensors": 77,
+   "params": 29030921
+  },
+  {
+   "path": "Semi-Supervised-Regression-source/saved_models/vad_research/alpha_fixed075_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-source/saved_models/vad_research/alpha_shift05_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-strong-supervised/saved_models/emobank/strong_supervised/s1_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 73,
+   "params": 28765187
+  },
+  {
+   "path": "Semi-Supervised-Regression-strong-supervised/saved_models/emobank/strong_supervised/s2_lb500_s0/model_best.pth",
+   "load": true,
+   "tensors": 73,
+   "params": 28765187
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb1000_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb1000_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb1000_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/ctrl_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/final_full_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/final_full_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/final_full_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb1000_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb1000_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb1000_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/p1_roberta_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb1000_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb1000_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb1000_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb250_s0/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb250_s1/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rcmt_lb250_s2/model_best.pth",
+   "load": true,
+   "tensors": 203,
+   "params": 125238531
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rkfinal_s0/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rkfinal_s1/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  },
+  {
+   "path": "Semi-Supervised-Regression-vadswap/saved_models/vad_research/rkfinal_s2/model_best.pth",
+   "load": true,
+   "tensors": 205,
+   "params": 125243145
+  }
+ ]
+}
