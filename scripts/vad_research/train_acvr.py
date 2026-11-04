@@ -123,6 +123,62 @@ def diff_huber(s, p0, sigma0, delta=1.0):
     return torch.nn.functional.huber_loss(z, torch.zeros_like(z), delta=delta)
 
 
+def ridge_reference(l_feat, l_y, u_feat, alphas=(1e-2, 1e-1, 1.0, 10.0, 100.0, 1e3), seed=0):
+    """Closed-form ridge reference fitted on the same labelled samples as the student.
+
+    This is the second admissible *difference reference* for the continuous-difference
+    distillation: same information budget (the fold's own labelled samples and the same
+    frozen-ish encoder features), but a different inductive bias (MSE-optimal linear
+    readout instead of the L1-trained MLP).  The ridge alpha is chosen by 5-fold CV
+    inside those labelled samples only.
+    """
+    X = l_feat.detach().float().cpu().numpy().astype(np.float64)
+    Y = l_y.detach().float().cpu().numpy().astype(np.float64)
+    U = u_feat.detach().float().cpu().numpy().astype(np.float64)
+    idx = np.random.default_rng(seed).permutation(len(X))
+
+    def fit_pred(Xtr, Ytr, Xq, al):
+        mu, my = Xtr.mean(0, keepdims=True), Ytr.mean(0, keepdims=True)
+        Xc = Xtr - mu
+        W = np.linalg.solve(Xc.T @ Xc + al * np.eye(Xc.shape[1]), Xc.T @ (Ytr - my))
+        return (Xq - mu) @ W + my
+
+    best, be = alphas[0], np.inf
+    for al in alphas:
+        errs = []
+        for f in np.array_split(idx, 5):
+            tr = np.setdiff1d(idx, f)
+            errs.append(float(np.abs(fit_pred(X[tr], Y[tr], X[f], al) - Y[f]).mean()))
+        e = float(np.mean(errs))
+        if e < be:
+            best, be = al, e
+    pred = fit_pred(X, Y, U, best)
+    return torch.tensor(pred, dtype=torch.float32, device=u_feat.device), best
+
+
+def point_loss(pred, target, kind='l1', delta=0.1, weights=None):
+    """Elementwise point loss on the (normalised) VAD scale.
+
+    ``l1`` reproduces the original ACVR objective exactly.  ``mse`` targets the
+    conditional mean (what R2 / CCC reward) and ``huber`` interpolates.
+    When ``weights`` is given the same reliability normalisation as the original
+    unsupervised term is applied: sum(w * per) / sum(w).
+    """
+    d = pred - target
+    if kind == 'l1':
+        per = d.abs()
+    elif kind == 'mse':
+        per = d.square()
+    elif kind == 'huber':
+        per = torch.nn.functional.huber_loss(d, torch.zeros_like(d), delta=delta,
+                                            reduction='none')
+    else:
+        raise ValueError(f'unknown point loss {kind}')
+    if weights is None:
+        return per.mean()
+    return (weights * per).sum() / weights.sum().clamp_min(1e-6)
+
+
 def center_huber(s, p0, sigma0, delta=1.0):
     """Mean-invariant reference distillation (centered M0)."""
     z = ((s - s.mean(0, keepdim=True)) - (p0 - p0.mean(0, keepdim=True))) / sigma0
@@ -158,6 +214,12 @@ def cli():
     p.add_argument('--weight-decay', type=float, default=0.01)
     p.add_argument('--clip-grad-norm', type=float, default=1.0)
     p.add_argument('--dropout', type=float, default=0.1)
+    p.add_argument('--sup-loss', choices=('l1', 'mse', 'huber'), default='l1',
+                   help='point loss on the 500 real labels')
+    p.add_argument('--unsup-loss', choices=('l1', 'mse', 'huber'), default='l1',
+                   help='point loss on the pseudo target')
+    p.add_argument('--huber-delta', type=float, default=0.1,
+                   help='Huber delta on the normalised VAD scale')
     p.add_argument('--ema-decay', type=float, default=0.99)
     p.add_argument('--lambda-u', type=float, default=1.0)
     p.add_argument('--gamma-dims', default="", help="comma-separated per-dim gamma for a + gamma*(t-a); overrides mode")
@@ -166,6 +228,9 @@ def cli():
     p.add_argument('--m0-ckpt', type=Path, default=None,
                    help='frozen matched supervised M0 checkpoint for diff distillation')
     p.add_argument('--diff-weight', type=float, default=0.0)
+    p.add_argument('--diff-ref', choices=('m0', 'ridge'), default='m0',
+                   help="difference reference: independent supervised M0 checkpoint, or a "
+                        "closed-form ridge fitted on the same labelled samples")
     p.add_argument('--diff-mode', choices=('pairs', 'center'), default='pairs')
     p.add_argument('--diff-shuffle', action='store_true',
                    help='negative control: shuffle M0 predictions within batch')
@@ -297,15 +362,20 @@ def main():
     id2row = {k: i for i, k in enumerate(ulb['id'].tolist())}
     m0_pred, m0_sigma = None, None
     if a.diff_weight > 0:
-        if a.m0_ckpt is None:
-            raise ValueError('--m0-ckpt is required when --diff-weight > 0')
-        m0 = RobertaVADRegressor(str(a.pretrain_path), dropout=0.1, offline=True).to(device)
-        md = torch.load(a.m0_ckpt, map_location='cpu', weights_only=False)
-        m0.load_state_dict(md['model'], strict=True); del md
-        m0_pred = predict_texts(m0, ulb['text'].tolist(), tok, device).to(device)
-        m0_sigma = m0_pred.std(0).clamp_min(1e-6)
-        del m0
-        torch.cuda.empty_cache()
+        if a.diff_ref == 'ridge':
+            m0_pred, used_alpha = ridge_reference(l_feat, l_y, u_feat, seed=a.seed)
+            m0_sigma = m0_pred.std(0).clamp_min(1e-6)
+            print(f'[diff-ref] ridge alpha={used_alpha} pred_std={m0_sigma.tolist()}', flush=True)
+        else:
+            if a.m0_ckpt is None:
+                raise ValueError('--m0-ckpt is required when --diff-ref m0')
+            m0 = RobertaVADRegressor(str(a.pretrain_path), dropout=0.1, offline=True).to(device)
+            md = torch.load(a.m0_ckpt, map_location='cpu', weights_only=False)
+            m0.load_state_dict(md['model'], strict=True); del md
+            m0_pred = predict_texts(m0, ulb['text'].tolist(), tok, device).to(device)
+            m0_sigma = m0_pred.std(0).clamp_min(1e-6)
+            del m0
+            torch.cuda.empty_cache()
     dev_feat = None
     if a.eval_knn_alpha > 0:
         dev_feat = encode(model.encoder, dev['text'].tolist(), tok, device).to(device)
@@ -373,7 +443,7 @@ def main():
 
         optim.zero_grad(set_to_none=True)
         pred_lb = model(**lb_tok)
-        loss = F.l1_loss(pred_lb, lb_y)
+        loss = point_loss(pred_lb, lb_y, a.sup_loss, a.huber_delta)
 
         mc = mc_predict(teacher, ulb_tok_w, a.mc_passes)
         rows = torch.tensor([id2row[i] for i in ulb_ids], device=device)
@@ -406,8 +476,7 @@ def main():
                                                 rel_mode=a.rel_mode, v0=a.jacf_v0,
                                                 dimnorm=a.rel_dimnorm, filter_q=a.filter_q)
         pred_s = model(**ulb_tok_s)
-        err = (pred_s - target).abs()
-        unsup = (rel * err).sum() / rel.sum().clamp_min(1e-6)
+        unsup = point_loss(pred_s, target, a.unsup_loss, a.huber_delta, weights=rel)
         total = loss + a.lambda_u * unsup
         if rda_q is not None:
             total = total + a.rda_weight * rda_loss(pred_s, rda_q, rda_qs)

@@ -39,7 +39,8 @@ from scripts.vad_research.train_roberta_vad_supervised import (  # noqa: E402
     RobertaVADRegressor, git_commit, set_seed, sha256_file,
 )
 from scripts.vad_research.train_acvr import (  # noqa: E402
-    UnlabeledTexts, ema_step, encode, knn_calibrate, mask_tokens, mc_predict, predict,
+    UnlabeledTexts, center_huber, diff_huber, ema_step, encode, knn_calibrate, mask_tokens,
+    mc_predict, predict, predict_texts, ridge_reference,
 )
 from scripts.vad_research.jacf_modes import evidence, fixed_alpha_objective  # noqa: E402
 
@@ -79,6 +80,8 @@ def predict_texts(model, texts, tok, device, bs=64):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--fold", type=int, required=True)
+    ap.add_argument("--data-seed", type=int, default=0, choices=(0, 1, 2),
+                    help="which lb500_s{seed} label split to use (must match --manifest)")
     ap.add_argument("--manifest", type=Path, required=True)
     ap.add_argument("--data-root", type=Path, required=True)
     ap.add_argument("--pretrain-path", type=Path, required=True)
@@ -98,12 +101,26 @@ def main():
     ap.add_argument("--jacf-k", type=int, default=20)
     ap.add_argument("--jacf-tau", type=float, default=0.1)
     ap.add_argument("--alpha-fixed", type=float, default=0.75)
+    ap.add_argument("--diff-weight", type=float, default=0.0,
+                    help="weight of the continuous-difference distillation term (0 disables)")
+    ap.add_argument("--diff-ref", choices=("m0", "ridge"), default="ridge",
+                    help="difference reference: this fold's supervised P1 checkpoint (m0) or "
+                         "a closed-form ridge fitted on the fold's own labelled features")
+    ap.add_argument("--diff-mode", choices=("pairs", "center"), default="pairs")
+    ap.add_argument("--diff-shuffle", action="store_true",
+                    help="negative control: shuffle the reference predictions within a batch")
     ap.add_argument("--eval-knn-alpha", type=float, default=0.4)
     ap.add_argument("--eval-knn-k", type=int, default=20)
     ap.add_argument("--eval-scale", type=float, default=1.2)
     ap.add_argument("--mask-prob", type=float, default=0.15)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--init-ckpt", type=Path, default=None,
+                    help="load this supervised checkpoint and skip the P1 warm-up phase, so that "
+                         "several semi-supervised branches start from the exact same base")
+    ap.add_argument("--save-ckpt", action="store_true",
+                    help="write p1_final.pth / jacf_final.pth (501 MB each); off by default so "
+                         "that a 15-fold grid does not exhaust the 96 GB volume")
     a = ap.parse_args()
 
     set_seed(a.fold)
@@ -115,8 +132,9 @@ def main():
         raise FileExistsError(f"Refusing to overwrite nonempty output: {out}")
     out.mkdir(parents=True, exist_ok=True)
 
-    lb = read_gold(a.data_root / "lb500_s0" / "train_lb.parquet", expected_n=500)
-    ulb = pd.read_parquet(a.data_root / "lb500_s0" / "train_ulb.parquet")
+    split_dir = a.data_root / f"lb500_s{a.data_seed}"
+    lb = read_gold(split_dir / "train_lb.parquet", expected_n=500)
+    ulb = pd.read_parquet(split_dir / "train_ulb.parquet")
     if set(ulb.columns) != {"id", "text"}:
         raise ValueError("train_ulb must be id/text only")
     man = json.loads(a.manifest.read_text())
@@ -138,11 +156,17 @@ def main():
     model = RobertaVADRegressor(str(a.pretrain_path), dropout=0.1, offline=True).to(device)
 
     # ---------------- P1: supervised, fixed epochs, no DEV ----------------
+    p1_losses = []
+    if a.init_ckpt is not None:
+        pk = torch.load(a.init_ckpt, map_location="cpu", weights_only=False)
+        model.load_state_dict(pk["model"], strict=True)
+        print(f"[init-ckpt] loaded {a.init_ckpt} (steps={pk.get('steps')} lr={pk.get('lr')})",
+              flush=True)
+        a.p1_epochs = 0
     p1_dl = DataLoader(GoldData(lb_train), batch_size=a.batch_size, shuffle=True,
                        collate_fn=TextCollator(tok, 128),
                        generator=torch.Generator().manual_seed(17_000 + a.fold))
     opt1 = torch.optim.AdamW(model.parameters(), lr=a.lr_p1, weight_decay=a.weight_decay)
-    p1_losses = []
     for epoch in range(a.p1_epochs):
         model.train()
         total, n = 0.0, 0
@@ -162,8 +186,9 @@ def main():
         print(f"P1 epoch {epoch + 1}/{a.p1_epochs} L1={p1_losses[-1]:.6f}", flush=True)
         if a.dry_run and epoch + 1 >= 1:
             break
-    torch.save({"model": model.state_dict(), "fold": a.fold, "p1_epochs": a.p1_epochs,
-                "p1_losses": p1_losses}, out / "p1_final.pth")
+    if a.save_ckpt:
+        torch.save({"model": model.state_dict(), "fold": a.fold, "p1_epochs": a.p1_epochs,
+                    "p1_losses": p1_losses}, out / "p1_final.pth")
 
     # ---------------- JACF: fixed alpha, fixed steps, no DEV ----------------
     teacher = copy.deepcopy(model).to(device)
@@ -174,6 +199,15 @@ def main():
     u_feat = encode(model.encoder, ulb["text"].tolist(), tok, device).to(device)
     l_y = torch.tensor(lb_train.loc[:, list(NORM_COLUMNS)].to_numpy(np.float32), device=device)
     id2row = {k: i for i, k in enumerate(ulb["id"].tolist())}
+    ref_pred, ref_sigma, ref_alpha = None, None, None
+    if a.diff_weight > 0:
+        if a.diff_ref == "ridge":
+            ref_pred, ref_alpha = ridge_reference(l_feat, l_y, u_feat, seed=a.fold)
+        else:
+            ref_pred = predict_texts(model, ulb["text"].tolist(), tok, device).to(device)
+        ref_sigma = ref_pred.std(0).clamp_min(1e-6)
+        print(f"[diff-ref={a.diff_ref}] alpha={ref_alpha} pred_std={ref_sigma.tolist()}", flush=True)
+        assert ref_pred.shape == (len(ulb), 3) and torch.isfinite(ref_pred).all()
     lb_iter = iter(DataLoader(GoldData(lb_train), batch_size=a.batch_size, shuffle=True,
                               collate_fn=TextCollator(tok, 128),
                               generator=torch.Generator().manual_seed(17_000 + a.fold)))
@@ -219,6 +253,14 @@ def main():
         pred_s = model(**ulb_tok_s)
         unsup = ((pred_s - target).abs() * rel).sum() / rel.sum().clamp_min(1e-6)
         loss = loss_sup + a.lambda_u * unsup
+        if a.diff_weight > 0 and ref_pred is not None:
+            p0 = ref_pred[rows]
+            if a.diff_shuffle:
+                p0 = p0[torch.randperm(len(p0), device=device)]
+            if a.diff_mode == "center":
+                loss = loss + a.diff_weight * center_huber(pred_s, p0, ref_sigma)
+            else:
+                loss = loss + a.diff_weight * diff_huber(pred_s, p0, ref_sigma)
         opt2.zero_grad(set_to_none=True)
         loss.backward()
         if a.clip_grad_norm > 0:
@@ -230,8 +272,9 @@ def main():
             print(f"JACF step {step + 1}/{a.jacf_steps} loss={jacf_losses[-1]:.6f}", flush=True)
         if a.dry_run and step + 1 >= 1:
             break
-    torch.save({"model": model.state_dict(), "fold": a.fold, "jacf_steps": a.jacf_steps,
-                "jacf_losses": jacf_losses, "alpha_fixed": a.alpha_fixed}, out / "jacf_final.pth")
+    if a.save_ckpt:
+        torch.save({"model": model.state_dict(), "fold": a.fold, "jacf_steps": a.jacf_steps,
+                    "jacf_losses": jacf_losses, "alpha_fixed": a.alpha_fixed}, out / "jacf_final.pth")
 
     # ---------------- held-out prediction + frozen VRRC ----------------
     hold_dl = DataLoader(GoldData(lb_hold), batch_size=a.eval_batch_size, shuffle=False,
