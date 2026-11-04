@@ -38,4 +38,4 @@ The active branches are `main`, `rankup-reproduction`, `emobank-rankup-3d`, `emo
 
 ## Former default branch
 
-`main` ended at `7ed6d26`; that commit is an ancestor of this archive branch and of `rankup-reproduction`. The repository default branch was moved to `rankup-reproduction` before removing `main`.
+`main` ended at `7ed6d267783d9dc8f99ae8188b126d125bff3ab79`; that commit is an ancestor of this archive branch and of `rankup-reproduction`. The repository default branch was moved to `rankup-reproduction` before removing `main`.
