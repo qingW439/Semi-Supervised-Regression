@@ -1,0 +1,10 @@
+{
+  "stage": "S1",
+  "s0_macro_mae": 0.18193474141756694,
+  "best_epoch": 0,
+  "best_source": "S0_frozen_BERT_Ridge",
+  "best_macro_mae": 0.18193474141756694,
+  "initial_model_state_sha256": "85601fb2bed0adaf783f53cb0cbf0ba0836dc561e3075b76b3f0ffe8d420206d",
+  "epochs_completed": 25,
+  "test_access": "none"
+}

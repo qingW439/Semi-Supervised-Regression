@@ -1,0 +1,29 @@
+{
+  "data_root": "/hy-tmp/rankup_project/data/emobank_processed",
+  "budget": 500,
+  "seed": 1,
+  "model": "/hy-tmp/rankup_project/pretrained/roberta-base",
+  "max_length": 128,
+  "batch_size": 16,
+  "eval_batch_size": 32,
+  "epochs": 20,
+  "patience": 5,
+  "min_delta": 0.0001,
+  "lr": 2e-05,
+  "weight_decay": 0.01,
+  "dropout": 0.1,
+  "clip_grad_norm": 1.0,
+  "num_workers": 0,
+  "device": "cuda",
+  "offline": true,
+  "check_only": false,
+  "out": "/hy-tmp/rankup_project/Semi-Supervised-Regression/saved_models/vad_research/p1_roberta_lb500_s1",
+  "git_commit": "23d54714c707ccd408f377e0ae68d54afda4ff9b",
+  "torch": "2.4.1+cu121",
+  "transformers": "4.46.3",
+  "split_sha256": {
+    "lb": "6236c82d38617869054a10a1aed16b199d098592facd6377ec579d9eea10eca5",
+    "ulb": "91968d87447dfa970a5a906c59d7f3ff16bf756333ce458e4b3810b99f552cf1",
+    "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c"
+  }
+}

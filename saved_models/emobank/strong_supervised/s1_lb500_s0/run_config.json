@@ -1,0 +1,36 @@
+{
+  "config": {
+    "stage": "S1",
+    "budget": 500,
+    "seed": 0,
+    "model": "google/bert_uncased_L-4_H-512_A-8",
+    "max_length": 128,
+    "batch_size": 8,
+    "eval_batch_size": 16,
+    "epochs": 25,
+    "encoder_lr": 1e-06,
+    "head_lr": 1e-05,
+    "weight_decay": 0.0005,
+    "clip_grad_norm": 1.0,
+    "dropout": 0.1,
+    "output_dir": "saved_models/emobank/strong_supervised/s1_lb500_s0"
+  },
+  "ridge_dir": "/hy-tmp/rankup_project/strong_supervised_inputs/ridge_base",
+  "ridge_sha256": {
+    "base_pretrained_features.npz": "bff34952213d9a3927e3a82ab8e426a50385a33c14ad076df4e4af8ffcbc9e63",
+    "ridge_base_audit.json": "433b4720627c7567130450473ab2072f9454029bb290f0783f456b939be5c022",
+    "dev_predictions.csv": "012ca1d799eb7ec8caeabcbbc6bd4455b0ea7bb0d0400530dead3ccdd54c15f2"
+  },
+  "data_sha256": {
+    "train": "c7c67afd9c62b71cc7dfd5a31e4958072805f157dc7bf92fa06d52f3ba9fb094",
+    "dev": "e8c39e896b067a3afcd4ef25686eb8f7ad10bccf8c2afe98847111aa40560d9c"
+  },
+  "ridge_equivalence_max_abs_norm": {
+    "ridge_replay": 5.9564590482175106e-08,
+    "folded_head": 5.960464477539063e-08,
+    "full_model": 5.960464477539063e-08
+  },
+  "initial_model_state_sha256": "85601fb2bed0adaf783f53cb0cbf0ba0836dc561e3075b76b3f0ffe8d420206d",
+  "git_commit": "6450419194d7f4932bea077371534c5f3517e068",
+  "test_access": "none"
+}
