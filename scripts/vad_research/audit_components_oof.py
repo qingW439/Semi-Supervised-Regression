@@ -139,7 +139,7 @@ def main():
                      "jacf_final": par[["vrr_V", "vrr_A", "vrr_D"]].to_numpy(float),
                      "mlp_p1": mlp_predict(base / "p1_final.pth", str(a.pretrain_path),
                                            lbh["text"].tolist(), tok, dev)}
-            Fl, Fh = np.load(base / "features_labeled.npy"), np.load(base / "features_holdout.npy")
+            Fl, Fh = np.load(base / "features_labeled.npy"), np.load(base / "features_holdout_p1.npy")
             Yt = lb[~lb["id"].isin(set(hold_ids))][["V_norm", "A_norm", "D_norm"]].to_numpy(float)
             prep, al = inner_cv(Fl, Yt)
             preds["ridge"] = fit_ridge(Fl, Yt, al, prep)(Fh)

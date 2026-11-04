@@ -123,7 +123,7 @@ def main():
                          "that a 15-fold grid does not exhaust the 96 GB volume")
     a = ap.parse_args()
 
-    set_seed(a.fold)
+    set_seed(1000 * a.data_seed + a.fold)
     device = torch.device(a.device if torch.cuda.is_available() else "cpu")
     if a.device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA requested but not available")
@@ -197,6 +197,8 @@ def main():
     opt2 = torch.optim.AdamW(model.parameters(), lr=a.lr_jacf, weight_decay=a.weight_decay)
     l_feat = encode(model.encoder, lb_train["text"].tolist(), tok, device).to(device)
     u_feat = encode(model.encoder, ulb["text"].tolist(), tok, device).to(device)
+    hold_feat_p1 = encode(model.encoder, lb_hold["text"].tolist(), tok, device).cpu().numpy()
+    np.save(out / "features_holdout_p1.npy", hold_feat_p1)
     l_y = torch.tensor(lb_train.loc[:, list(NORM_COLUMNS)].to_numpy(np.float32), device=device)
     id2row = {k: i for i, k in enumerate(ulb["id"].tolist())}
     ref_pred, ref_sigma, ref_alpha = None, None, None

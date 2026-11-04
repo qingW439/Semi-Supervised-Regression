@@ -10,12 +10,12 @@
 #
 # All five arms share the identical base weights, so every comparison is exactly paired and
 # the unlabeled-data contribution is isolated by `m1 - sup96`.
-set -u
-R=/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-comp2
+set -euo pipefail
+R=${R:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}
 PY=/root/autodl-tmp/rankup_project/envs/rankup/bin/python
 DATA=/root/autodl-tmp/rankup_project/data/emobank_processed
 PRE=/root/autodl-tmp/rankup_project/pretrained/roberta-base
-MAIN=/root/autodl-tmp/rankup_project/Semi-Supervised-Regression-avrrc
+MAIN=${MAIN:-$R}
 BASE_STEPS=${BASE_STEPS:-1600}
 BASE_LR=${BASE_LR:-1e-4}
 BASE_BS=${BASE_BS:-64}
@@ -54,12 +54,7 @@ for S in 0 1 2; do
     run_branch m1     --lambda-u 1.0 --diff-weight 0.05 --diff-ref ridge --diff-mode pairs
     run_branch m1_shuf --lambda-u 1.0 --diff-weight 0.05 --diff-ref ridge --diff-mode pairs --diff-shuffle
     echo "  done $ROOT $(date +%H:%M:%S)" >> outputs/auto_search/logs/strong_base.log
-    # keep base.pth until every branch is on disk, then delete (predictions are what we need)
-    if [ -s "$ROOT/sup96/oof_predictions.parquet" ] && [ -s "$ROOT/jacf/oof_predictions.parquet" ] \
-       && [ -s "$ROOT/m1/oof_predictions.parquet" ] && [ -s "$ROOT/m1_shuf/oof_predictions.parquet" ]; then
-      sz=$(stat -c %s "$ROOT/base.pth"); echo "DEL $ROOT/base.pth $sz" >> /root/cleanup_strong_base.log
-      rm -f -- "$ROOT/base.pth"
-    fi
+    # Retain base.pth for exact paired reruns and checkpoint provenance.
   done
 done
 echo "STRONG BASE GRID DONE $(date +%H:%M:%S)" >> outputs/auto_search/logs/strong_base.log

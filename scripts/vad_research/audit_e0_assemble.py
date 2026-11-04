@@ -140,7 +140,7 @@ def main():
             assert np.allclose(par[["y_V", "y_A", "y_D"]].to_numpy(float), Yh, atol=1e-6)
             Yt = lb[~lb["id"].isin(set(hold_ids))][["V_norm", "A_norm", "D_norm"]].to_numpy(float)
 
-            Fl, Fh = np.load(d / "features_labeled.npy"), np.load(d / "features_holdout.npy")
+            Fl, Fh = np.load(d / "features_labeled.npy"), np.load(d / "features_holdout_p1.npy")
             prep, al = inner_cv(Fl, Yt)
             p_ridge = fit_ridge(Fl, Yt, al, prep)(Fh)
             p_p1 = model_predict(d / "p1_final.pth", str(a.pretrain_path),
